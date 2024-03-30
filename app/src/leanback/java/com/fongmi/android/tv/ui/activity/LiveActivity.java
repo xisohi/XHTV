@@ -265,7 +265,7 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
 
     private void getLive() {
         mBinding.control.home.setText(getHome().getName());
-        mPlayers.setPlayer(getPlayerType(-1));
+        mPlayers.setPlayer(Setting.getLivePlayer());
         mViewModel.getLive(getHome());
         setPlayerView();
         setDecodeView();
@@ -612,7 +612,6 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
     private void fetch() {
         if (mChannel == null) return;
         LiveConfig.get().setKeep(mChannel);
-        mBinding.control.seek.reset();
         mViewModel.getUrl(mChannel);
         mPlayers.clear();
         showProgress();
@@ -689,7 +688,6 @@ public class LiveActivity extends BaseActivity implements Clock.Callback, GroupP
             case 0:
                 setTrackVisible(false);
                 mClock.setCallback(this);
-                mBinding.control.seek.start();
                 break;
             case Player.STATE_IDLE:
                 break;

@@ -67,8 +67,8 @@ import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.player.ExoUtil;
 import com.fongmi.android.tv.player.Players;
 import com.fongmi.android.tv.player.Source;
-import com.fongmi.android.tv.player.Timer;
 import com.fongmi.android.tv.player.danmu.Parser;
+import com.fongmi.android.tv.utils.Timer;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
 import com.fongmi.android.tv.ui.adapter.FlagAdapter;
@@ -89,6 +89,7 @@ import com.fongmi.android.tv.ui.dialog.InfoDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
+import com.fongmi.android.tv.utils.IDMUtil;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PiP;
@@ -403,6 +404,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     private void setDecodeView() {
         mBinding.control.action.decode.setText(mPlayers.getDecodeText());
+        if (mControlDialog != null && mControlDialog.isVisible()) mControlDialog.updateDecode();
     }
 
     private void setVideoView() {
@@ -662,7 +664,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.control.prevRoot.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
         mBinding.episode.setVisibility(items.size() == 0 ? View.GONE : View.VISIBLE);
         mBinding.reverse.setVisibility(items.size() < 2 ? View.GONE : View.VISIBLE);
-        mBinding.more.setVisibility(items.size() < 10 ? View.GONE : View.VISIBLE);
+        mBinding.more.setVisibility(items.size() < 3 ? View.GONE : View.VISIBLE);
         mEpisodeAdapter.addAll(items);
     }
 
@@ -720,6 +722,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     }
 
     private boolean onCopy() {
+        Notify.show(R.string.copied);
         Util.copy(mBinding.content.getText().toString());
         return true;
     }
@@ -840,7 +843,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     private void onReset(boolean replay) {
         mClock.setCallback(null);
-        mBinding.control.seek.reset();
         if (mFlagAdapter.isEmpty()) return;
         if (mEpisodeAdapter.isEmpty()) return;
         getPlayer(getFlag(), getEpisode(), replay);
@@ -855,6 +857,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void onPlayer() {
         mPlayers.togglePlayer();
         setPlayerView();
+        setDecodeView();
         setR1Callback();
         onRefresh();
     }
@@ -936,6 +939,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.display.time.setVisibility(Setting.isDisplayTime() && visible  ? View.VISIBLE : View.GONE);
         mBinding.display.netspeed.setVisibility(Setting.isDisplaySpeed() && visible ? View.VISIBLE : View.GONE);
         mBinding.display.duration.setVisibility(Setting.isDisplayDuration() && visible ? View.VISIBLE : View.GONE);
+        mBinding.display.progress.setVisibility(Setting.isDisplayMiniProgress() && visible ? View.VISIBLE : View.GONE);
     }
 
     private void onTimeChangeDisplaySpeed() {
@@ -944,6 +948,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         long position = mPlayers.getPosition();
         if (Setting.isDisplaySpeed() && visible) Traffic.setSpeed(mBinding.display.netspeed);
         if (Setting.isDisplayDuration() && visible && position > 0) mBinding.display.duration.setText(mPlayers.getPositionTime(0) + "/" + mPlayers.getDurationTime());
+        if (Setting.isDisplayMiniProgress() && visible && position > 0) mBinding.display.progress.setProgress((int)(position * 100 / mPlayers.getDuration()));
         showDisplayInfo();
     }
 
@@ -1025,7 +1030,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.control.danmuSetting.setVisibility(isLock() || !Setting.isDanmuLoad() || !isVisible(mBinding.danmaku) ? View.GONE : View.VISIBLE);
         mBinding.control.setting.setVisibility(mHistory == null || isFullscreen() ? View.GONE : View.VISIBLE);
         mBinding.control.right.rotate.setVisibility(isFullscreen() && !isLock() ? View.VISIBLE : View.GONE);
-        mBinding.control.keep.setVisibility(mHistory == null || isFullscreen() ? View.GONE : View.VISIBLE);
+        mBinding.control.keep.setVisibility(mHistory == null ? View.GONE : View.VISIBLE);
         mBinding.control.right.back.setVisibility(isFullscreen() && !isLock() ? View.VISIBLE : View.GONE);
         mBinding.control.parse.setVisibility(isFullscreen() && isUseParse() ? View.VISIBLE : View.GONE);
         mBinding.control.action.getRoot().setVisibility(isFullscreen() ? View.VISIBLE : View.GONE);
@@ -1118,6 +1123,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mHistory = History.find(getHistoryKey());
         mHistory = mHistory == null ? createHistory(item) : mHistory;
         if (!TextUtils.isEmpty(getMark())) mHistory.setVodRemarks(getMark());
+        if (Setting.isIncognito() && mHistory.getKey().equals(getHistoryKey())) mHistory.delete();
         mBinding.control.action.opening.setText(mHistory.getOpening() == 0 ? getString(R.string.play_op) : mPlayers.stringToTime(mHistory.getOpening()));
         mBinding.control.action.ending.setText(mHistory.getEnding() == 0 ? getString(R.string.play_ed) : mPlayers.stringToTime(mHistory.getEnding()));
         mBinding.control.action.speed.setText(mPlayers.setSpeed(mHistory.getSpeed()));
@@ -1190,7 +1196,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         long position, duration;
         mHistory.setPosition(position = mPlayers.getPosition());
         mHistory.setDuration(duration = mPlayers.getDuration());
-        if (position >= 0 && duration > 0) App.execute(() -> mHistory.update());
+        if (position >= 0 && duration > 0 && !Setting.isIncognito()) App.execute(() -> mHistory.update());
         if (mHistory.getEnding() > 0 && duration > 0 && mHistory.getEnding() + position >= duration) {
             mClock.setCallback(null);
             checkNext();
@@ -1238,7 +1244,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
                 setInitTrack(true);
                 setTrackVisible(false);
                 mClock.setCallback(this);
-                mBinding.control.seek.start();
                 break;
             case Player.STATE_IDLE:
                 break;
@@ -1329,6 +1334,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void nextPlayer() {
         mPlayers.nextPlayer();
         setPlayerView();
+        setDecodeView();
         onRefresh();
     }
 
@@ -1648,7 +1654,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         if (!isFullscreen()) {
             App.post(this::enterFullscreen, 250);
         } else if (mPlayers.isPlaying()) {
-            showControl();
             onPaused();
         } else {
             hideControl();
@@ -1658,6 +1663,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     @Override
     public void onShare(CharSequence title, String url) {
+        if (IDMUtil.downloadFile(this, url, title.toString(), mPlayers.getHeaders(), false, false)) return;
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(Intent.EXTRA_TEXT, url);

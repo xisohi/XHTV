@@ -7,6 +7,7 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.annotations.SerializedName;
@@ -119,6 +120,10 @@ public class Config {
         this.time = time;
     }
 
+    public boolean isCache() {
+        return getTime() + (long)(3600*1000 * Setting.getConfigCache()) > System.currentTimeMillis();
+    }
+
     public Config type(int type) {
         setType(type);
         return this;
@@ -221,12 +226,17 @@ public class Config {
         return this;
     }
 
+    public Config save() {
+        if (isEmpty()) return this;
+        AppDatabase.get().getConfigDao().update(this);
+        return this;
+    }
+
     public Config update() {
         if (isEmpty()) return this;
         setTime(System.currentTimeMillis());
         Prefers.put("config_" + getType(), getUrl());
-        AppDatabase.get().getConfigDao().update(this);
-        return this;
+        return save();
     }
 
     public void delete() {

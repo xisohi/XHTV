@@ -69,6 +69,7 @@ public class CustomWebView extends WebView {
         getSettings().setBuiltInZoomControls(true);
         getSettings().setDisplayZoomControls(false);
         getSettings().setLoadWithOverviewMode(true);
+        getSettings().setUserAgentString(Setting.getUa());
         getSettings().setMediaPlaybackRequiresUserGesture(false);
         getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
         getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
@@ -76,27 +77,27 @@ public class CustomWebView extends WebView {
         setWebViewClient(webViewClient());
     }
 
-    private void setUserAgent(Map<String, String> headers) {
-        if (headers.isEmpty()) {
-            getSettings().setUserAgentString(Setting.getUa());
-        } else for (String key : headers.keySet()) {
-            if (key.equalsIgnoreCase(HttpHeaders.USER_AGENT)) {
-                getSettings().setUserAgentString(headers.get(key));
-                break;
-            }
-        }
-    }
-
     public CustomWebView start(String key, String from, Map<String, String> headers, String url, String click, ParseCallback callback, boolean detect) {
         App.post(timer, Constant.TIMEOUT_PARSE_WEB);
         this.callback = callback;
-        setUserAgent(headers);
-        loadUrl(url, headers);
         this.detect = detect;
         this.click = click;
         this.from = from;
         this.key = key;
+        start(url, headers);
         return this;
+    }
+
+    private void start(String url, Map<String, String> headers) {
+        checkHeader(url, headers);
+        loadUrl(url, headers);
+    }
+
+    private void checkHeader(String url, Map<String, String> headers) {
+        for (String key : headers.keySet()) {
+            if (HttpHeaders.COOKIE.equalsIgnoreCase(key)) CookieManager.getInstance().setCookie(url, headers.get(key));
+            if (HttpHeaders.USER_AGENT.equalsIgnoreCase(key)) getSettings().setUserAgentString(headers.get(key));
+        }
     }
 
     private WebViewClient webViewClient() {
@@ -109,7 +110,7 @@ public class CustomWebView extends WebView {
                 if (TextUtils.isEmpty(host) || VodConfig.get().getAds().contains(host)) return empty;
                 if (url.contains("challenges.cloudflare.com/cdn-cgi")) App.post(() -> showDialog());
                 if (detect && url.contains("player/?url=")) onParseAdd(headers, url);
-                else if (isVideoFormat(headers, url)) interrupt(headers, url);
+                else if (isVideoFormat(url)) interrupt(headers, url);
                 return super.shouldInterceptRequest(view, request);
             }
 
@@ -166,15 +167,15 @@ public class CustomWebView extends WebView {
         }
     }
 
-    private boolean isVideoFormat(Map<String, String> headers, String url) {
+    private boolean isVideoFormat(String url) {
         try {
             Logger.t(TAG).d(url);
             Site site = VodConfig.get().getSite(key);
             Spider spider = VodConfig.get().getSpider(site);
             if (spider.manualVideoCheck()) return spider.isVideoFormat(url);
-            return Sniffer.isVideoFormat(url, headers);
+            return Sniffer.isVideoFormat(url);
         } catch (Exception ignored) {
-            return Sniffer.isVideoFormat(url, headers);
+            return Sniffer.isVideoFormat(url);
         }
     }
 

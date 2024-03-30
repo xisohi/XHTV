@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.bean.Live;
@@ -49,7 +48,6 @@ public class LiveDialog implements LiveAdapter.OnClickListener {
         binding.recycler.setHasFixedSize(true);
         binding.recycler.setItemAnimator(null);
         binding.recycler.addItemDecoration(new SpaceItemDecoration(1, 16));
-        binding.recycler.setLayoutManager(new GridLayoutManager(dialog.getContext(), 1));
         binding.recycler.post(() -> binding.recycler.scrollToPosition(LiveConfig.getHomeIndex()));
     }
 

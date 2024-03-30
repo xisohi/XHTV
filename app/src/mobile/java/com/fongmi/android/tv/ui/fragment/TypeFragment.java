@@ -69,6 +69,10 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return isFolder() ? Style.list() : getSite().getStyle(mPages.isEmpty() ? getArguments().getParcelable("style") : getLastPage().getStyle());
     }
 
+    private boolean isIndexs() {
+        return getSite().isIndexs();
+    }
+
     private HashMap<String, String> getExtend() {
         Serializable extend = getArguments().getSerializable("extend");
         return extend == null ? new HashMap<>() : (HashMap<String, String>) extend;
@@ -79,7 +83,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private boolean isHome() {
-        return getTypeId().equals("home");
+        return "home".equals(getTypeId());
     }
 
     private Site getSite() {
@@ -142,9 +146,9 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void getVideo(String typeId, String page) {
-        if (page.equals("1")) mAdapter.clear();
-        if (page.equals("1") && !mBinding.swipeLayout.isRefreshing()) mBinding.progressLayout.showProgress();
-        if (isHome() && page.equals("1")) setAdapter(getParent().getResult());
+        if ("1".equals(page)) mAdapter.clear();
+        if ("1".equals(page) && !mBinding.swipeLayout.isRefreshing()) mBinding.progressLayout.showProgress();
+        if (isHome() && "1".equals(page)) setAdapter(getParent().getResult());
         else mViewModel.categoryContent(getKey(), typeId, page, true, mExtends);
     }
 
@@ -222,7 +226,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             mPages.add(Page.get(item, findPosition()));
             getVideo(item.getVodId(), "1");
         } else {
-            if (Setting.isAggregatedSearch()) CollectActivity.start(getActivity(), item.getVodName());
+            if (isIndexs()) CollectActivity.start(getActivity(), item.getVodName());
             else if (item.isManga()) DetailActivity.start(getActivity(), getKey(), item.getVodId(), item.getVodName(), item.getVodPic());
             else VideoActivity.start(getActivity(), getKey(), item.getVodId(), item.getVodName(), item.getVodPic(), isFolder() ? item.getVodName() : null, false);
         }

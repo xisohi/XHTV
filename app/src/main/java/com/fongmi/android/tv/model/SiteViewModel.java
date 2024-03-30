@@ -20,6 +20,7 @@ import com.fongmi.android.tv.bean.Url;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.exception.ExtractException;
 import com.fongmi.android.tv.player.Source;
+import com.fongmi.android.tv.player.extractor.Thunder;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Sniffer;
 import com.github.catvod.crawler.Spider;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -125,7 +127,7 @@ public class SiteViewModel extends ViewModel {
                 if (!result.getList().isEmpty()) result.getList().get(0).setVodFlags();
                 if (!result.getList().isEmpty()) checkThunder(result.getList().get(0).getVodFlags());
                 return result;
-            } else if (site.isEmpty() && key.equals("push_agent")) {
+            } else if (site.isEmpty() && "push_agent".equals(key)) {
                 Vod vod = new Vod();
                 vod.setVodId(id);
                 vod.setVodName(id);
@@ -173,7 +175,7 @@ public class SiteViewModel extends ViewModel {
                 result.setUrl(Source.get().fetch(result));
                 result.setHeader(site.getHeader());
                 return result;
-            } else if (site.isEmpty() && key.equals("push_agent")) {
+            } else if (site.isEmpty() && "push_agent".equals(key)) {
                 Result result = new Result();
                 result.setParse(0);
                 result.setFlag(flag);
@@ -183,7 +185,7 @@ public class SiteViewModel extends ViewModel {
             } else {
                 Url url = Url.create().add(id);
                 String type = Uri.parse(id).getQueryParameter("type");
-                if (type != null && type.equals("json")) url = Result.fromJson(OkHttp.newCall(id, site.getHeaders()).execute().body().string()).getUrl();
+                if ("json".equals(type)) url = Result.fromJson(OkHttp.newCall(id, site.getHeaders()).execute().body().string()).getUrl();
                 Result result = new Result();
                 result.setUrl(url);
                 result.setFlag(flag);
@@ -255,7 +257,7 @@ public class SiteViewModel extends ViewModel {
     }
 
     private Result fetchPic(Site site, Result result) throws Exception {
-        if (result.getList().isEmpty() || result.getList().get(0).getVodPic().length() > 0) return result;
+        if (site.getType() > 2 || result.getList().isEmpty() || result.getList().get(0).getVodPic().length() > 0) return result;
         ArrayList<String> ids = new ArrayList<>();
         for (Vod item : result.getList()) ids.add(item.getVodId());
         ArrayMap<String, String> params = new ArrayMap<>();
@@ -269,9 +271,23 @@ public class SiteViewModel extends ViewModel {
     private void checkThunder(List<Flag> flags) throws Exception {
         for (Flag flag : flags) {
             ExecutorService executor = Executors.newFixedThreadPool(Constant.THREAD_POOL * 2);
-            for (Future<List<Episode>> future : executor.invokeAll(flag.getMagnet(), 30, TimeUnit.SECONDS)) flag.getEpisodes().addAll(future.get());
+            for (Future<List<Episode>> future : executor.invokeAll(getThunder(flag), 30, TimeUnit.SECONDS)) flag.getEpisodes().addAll(future.get());
             executor.shutdownNow();
         }
+    }
+
+    private List<Thunder.Parser> getThunder(Flag flag) {
+        List<Thunder.Parser> items = new ArrayList<>();
+        Iterator<Episode> iterator = flag.getEpisodes().iterator();
+        while (iterator.hasNext()) addThunder(iterator, items);
+        return items;
+    }
+
+    private void addThunder(Iterator<Episode> iterator, List<Thunder.Parser> items) {
+        String url = iterator.next().getUrl();
+        if (!Sniffer.isThunder(url)) return;
+        items.add(Thunder.Parser.get(url));
+        iterator.remove();
     }
 
     private void post(Site site, Result result) {

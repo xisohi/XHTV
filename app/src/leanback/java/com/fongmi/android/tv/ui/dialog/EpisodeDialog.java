@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.dialog;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -17,12 +18,14 @@ import androidx.leanback.widget.ItemBridgeAdapter;
 import androidx.leanback.widget.OnChildViewHolderSelectedListener;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
-import com.fongmi.android.tv.R;
+
+import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.databinding.DialogEpisodeBinding;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.fongmi.android.tv.ui.presenter.ArrayPresenter;
 import com.fongmi.android.tv.ui.presenter.EpisodePresenter;
+import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -45,8 +48,14 @@ public class EpisodeDialog extends BaseDialog implements ArrayPresenter.OnClickL
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-        setStyle(STYLE_NORMAL, R.style.TransBottomSheetDialog);
         BottomSheetDialog dialog = (BottomSheetDialog) super.onCreateDialog(savedInstanceState);
+        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (activity.isFullscreen() && KeyUtil.isMenuKey(event) && Setting.getFullscreenMenuKey() == 1) dismiss();
+                return false;
+            }
+        });
         return dialog;
     }
 
@@ -98,23 +107,27 @@ public class EpisodeDialog extends BaseDialog implements ArrayPresenter.OnClickL
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
                 super.onChildViewHolderSelected(parent, child, position, subposition);
                 if (child != null ) mFocus1 = child.itemView;
-                int itemCount = binding.episodeVert.getAdapter().getItemCount();
-                if (itemCount <= 0) return;
-                int columns = mEpisodePresenter.getNumColumns();
-                if (position + columns >= itemCount && (position % columns) + 1 > itemCount % columns) {
-                    child.itemView.setOnKeyListener(new View.OnKeyListener() {
-                        @Override
-                        public boolean onKey(View v, int keyCode, KeyEvent event) {
-                            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getAction() == KeyEvent.ACTION_DOWN) {
-                                View lastItem =  binding.episodeVert.getLayoutManager().findViewByPosition(itemCount - 1);
-                                if (lastItem != null) lastItem.requestFocus();
-                            }
-                            return false;
-                        }
-                    });
-                }
+                setEpisodeChildKeyListener(child, position);
             }
         });
+    }
+
+    private void setEpisodeChildKeyListener(RecyclerView.ViewHolder child, int position) {
+        int itemCount = binding.episodeVert.getAdapter().getItemCount();
+        if (itemCount <= 0) return;
+        int columns = mEpisodePresenter.getNumColumns();
+        if ((position + columns >= itemCount) && ((position % columns) + 1 > (itemCount % columns))) {
+            child.itemView.setOnKeyListener(new View.OnKeyListener() {
+                @Override
+                public boolean onKey(View v, int keyCode, KeyEvent event) {
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getAction() == KeyEvent.ACTION_DOWN) {
+                        View lastItem =  binding.episodeVert.getLayoutManager().findViewByPosition(itemCount - 1);
+                        if (lastItem != null) lastItem.requestFocus();
+                    }
+                    return false;
+                }
+            });
+        }
     }
 
     private void setEpisodeSelectedPosition(int position) {
@@ -144,6 +157,10 @@ public class EpisodeDialog extends BaseDialog implements ArrayPresenter.OnClickL
         this.binding.episodeVert.postDelayed(() -> {
             int position = getEpisodePosition();
             setEpisodeSelectedPosition(position);
+            binding.episodeVert.postDelayed(() -> {
+                View selectedItem = binding.episodeVert.getLayoutManager().findViewByPosition(position);
+                if (selectedItem != null) selectedItem.requestFocus();
+            }, 300);
         }, 1000);
     }
 
@@ -190,6 +207,11 @@ public class EpisodeDialog extends BaseDialog implements ArrayPresenter.OnClickL
     private void setEpisodeActivated(Episode item) {
         if (!this.activity.isFullscreen() || !item.isActivated()) this.activity.setEpisodeActivated(item);
         this.dismiss();
+    }
+
+    @Override
+    public boolean onArrayItemTouch() {
+        return false;
     }
 
     @Override

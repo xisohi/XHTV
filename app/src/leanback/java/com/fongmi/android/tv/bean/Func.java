@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.bean;
 
 import android.annotation.SuppressLint;
+import android.os.Build;
 import android.view.View;
 
 import com.fongmi.android.tv.R;
@@ -20,7 +21,7 @@ public class Func {
 
     public Func(int resId) {
         this.resId = resId;
-        this.id = View.generateViewId();
+        this.id = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 ? View.generateViewId() : -1;
         this.setDrawable();
     }
 
@@ -59,6 +60,9 @@ public class Func {
     @SuppressLint("NonConstantResourceId")
     public void setDrawable() {
         switch (resId) {
+            case R.string.home_history_short:
+                this.drawable = R.drawable.ic_home_history;
+                break;
             case R.string.home_vod:
                 this.drawable = R.drawable.ic_home_vod;
                 break;

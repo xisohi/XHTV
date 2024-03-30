@@ -100,13 +100,11 @@ public class Prefers {
             for (Map.Entry<String, ?> entry : map.entrySet()) Prefers.put(entry.getKey(), convert(entry));
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            Path.clear(file);
         }
     }
 
     private static Object convert(Map.Entry<String, ?> entry) {
-        if (entry.getKey().equals("danmu_size")) {
+        if ("danmu_size".equals(entry.getKey())) {
             return Float.parseFloat(entry.getValue().toString());
         } else {
             return entry.getValue();

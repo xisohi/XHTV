@@ -19,8 +19,8 @@
         android:id="@+id/speed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:stepSize="0.25"
-        android:valueFrom="0.5"
+        android:stepSize="0.1"
+        android:valueFrom="0.2"
         android:valueTo="5"
         app:trackColorInactive="@color/blue_50" />
 
@@ -282,8 +282,18 @@
             android:id="@+id/dpduration"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/shape_accent"
             android:text="@string/play_duration"
+            android:textColor="@color/control"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/dpminiprogress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/shape_accent"
+            android:text="@string/play_mini_progress"
             android:textColor="@color/control"
             android:textSize="14sp" />
 

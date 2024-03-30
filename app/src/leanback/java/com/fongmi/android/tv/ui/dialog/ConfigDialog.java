@@ -23,6 +23,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.QRCode;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.UrlUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.permissionx.guolindev.PermissionX;
 
@@ -79,12 +80,11 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void initView() {
-        String address = Server.get().getAddress();
         binding.text.setText(url = getUrl());
-        binding.code.setImageBitmap(QRCode.getBitmap(address, 200, 0));
         binding.text.setSelection(TextUtils.isEmpty(url) ? 0 : url.length());
         binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
-        binding.info.setText(ResUtil.getString(R.string.push_info, address).replace("，", "\n"));
+        binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
+        binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
         binding.storage.setVisibility(PermissionX.isGranted(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ? View.GONE : View.VISIBLE);
     }
 
@@ -123,13 +123,13 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void detect(String s) {
-        if (append && s.equalsIgnoreCase("h")) {
+        if (append && "h".equalsIgnoreCase(s)) {
             append = false;
             binding.text.append("ttp://");
-        } else if (append && s.equalsIgnoreCase("f")) {
+        } else if (append && "f".equalsIgnoreCase(s)) {
             append = false;
             binding.text.append("ile://");
-        } else if (append && s.equalsIgnoreCase("a")) {
+        } else if (append && "a".equalsIgnoreCase(s)) {
             append = false;
             binding.text.append("ssets://");
         } else if (s.length() > 1) {
@@ -140,10 +140,12 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void onPositive(View view) {
-        String text = binding.text.getText().toString().trim();
+        String name = binding.name.getText().toString().trim();
+        String text = UrlUtil.fixUrl(binding.text.getText().toString().trim());
         if (edit) Config.find(url, type).url(text).update();
         if (text.isEmpty()) Config.delete(url, type);
-        callback.setConfig(Config.find(text, type));
+        if (name.isEmpty()) callback.setConfig(Config.find(text, type));
+        else callback.setConfig(Config.find(text, name, type));
         dialog.dismiss();
     }
 
@@ -154,6 +156,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onServerEvent(ServerEvent event) {
         if (event.getType() != ServerEvent.Type.SETTING) return;
+        binding.name.setText(event.getName());
         binding.text.setText(event.getText());
         binding.text.setSelection(binding.text.getText().length());
     }
