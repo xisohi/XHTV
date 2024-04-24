@@ -158,7 +158,7 @@
 
     <!-- X5 WebView -->
     <string name="x5webview_title">X5 WebView</string>
-    <string name="x5webview_download_enable">Download X5 WebView and Enable?</string>
+    <string name="x5webview_download_enable">Unzip X5 WebView and Enable?</string>
     <string name="x5webview_enabled">X5 WebView Enabled</string>
     <string name="x5webview_parsing">X5 WebView Parsing</string>
 
@@ -281,10 +281,8 @@
 
     <string-array name="select_config_cache">
         <item>Close</item>
-        <item>1 Hour</item>
-        <item>2 Hour</item>
-        <item>3 Hour</item>
-        <item>4 Hour</item>
+        <item>12 Hour</item>
+        <item>24 Hour</item>
     </string-array>
 
     <string-array name="select_caption">
