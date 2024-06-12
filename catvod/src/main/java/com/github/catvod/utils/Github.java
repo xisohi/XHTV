@@ -11,11 +11,11 @@ public class Github {
     public static final String URL = "https://xhys.lcjly.cn";
 
     private static String getUrl(String path, String name) {
-        return URL + "/" + path + "/" + name;
+        return path + "/" + name;
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("xhtv/" + (dev ? "dev" : "release"), name + ".json");
+        return getUrl("https://xhys.lcjly.cn" , "XHTVupdate.json");
     }
 
     public static String getApk(boolean dev, String name) {
