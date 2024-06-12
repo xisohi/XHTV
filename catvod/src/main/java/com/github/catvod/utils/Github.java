@@ -19,7 +19,7 @@ public class Github {
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("apk/" + (dev ? "dev" : "release"), name + ".apk");
+        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/XHTV/" + (dev ? "dev" : "release"), name + ".apk");
     }
 
     public static String getSo(String url) {
