@@ -99,7 +99,7 @@ public class VodConfig {
         this.pyLoader = new PyLoader();
         this.jsLoader = new JsLoader();
         this.loadLive = false;
-        this.newSourceUrl = "https://tvboxosc.pages.dev/XHYSyuan.json";  // 设置默认新源地址
+        this.newSourceUrl = App.get().getString(R.string.app_source)  // 设置默认新源地址
 
         return this;
     }
