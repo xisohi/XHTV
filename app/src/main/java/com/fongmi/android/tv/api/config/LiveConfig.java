@@ -73,7 +73,7 @@ public class LiveConfig {
 
     public LiveConfig init() {
         this.home = null;
-        this.newSourceUrl = App.get().getString(R.string.app_source)  // 设置默认新源地址
+        this.newSourceUrl = App.get().getString(R.string.app_source);  // 设置默认新源地址
         return config(Config.live());
     }
 
