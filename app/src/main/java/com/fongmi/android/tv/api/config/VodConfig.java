@@ -51,7 +51,6 @@ public class VodConfig {
     private String wall;
     private Site home;
     private String newSourceUrl;// 新增字段用于新源地址
-
     private static class Loader {
         static volatile VodConfig INSTANCE = new VodConfig();
     }
@@ -134,8 +133,7 @@ public class VodConfig {
         if (cache) App.execute(() -> loadConfigCache(callback));
         else App.execute(() -> loadConfig(callback));
     }
-    
-    // 加载配置的方法，优先使用 newSourceUrl
+
     private void loadConfig(Callback callback) {
         try {
             // 优先使用 newSourceUrl
