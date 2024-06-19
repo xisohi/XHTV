@@ -50,7 +50,7 @@ public class VodConfig {
     private Parse parse;
     private String wall;
     private Site home;
-    private String newSourceUrl;// 新增字段用于新源地址
+    private String newSourceUrl; // 新增字段用于新源地址
     private static class Loader {
         static volatile VodConfig INSTANCE = new VodConfig();
     }
@@ -98,7 +98,7 @@ public class VodConfig {
         this.pyLoader = new PyLoader();
         this.jsLoader = new JsLoader();
         this.loadLive = false;
-        this.newSourceUrl = App.get().getString(R.string.app_source);  // 设置默认新源地址
+        this.newSourceUrl = App.get().getString(R.string.app_source); // 设置默认新源地址
 
         return this;
     }
@@ -136,11 +136,11 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            // 优先使用 newSourceUrl
-            String url = !TextUtils.isEmpty(newSourceUrl) ? newSourceUrl : config.getUrl();
+            // 优先使用 config.getUrl()
+            String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
             checkJson(Json.parse(Decoder.getJson(url)).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            if (TextUtils.isEmpty(newSourceUrl)) App.post(() -> callback.error(""));
             else loadCache(callback, e);
             e.printStackTrace();
         }
