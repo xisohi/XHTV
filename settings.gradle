@@ -2,7 +2,7 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
-        jcenter()
+        mavenCentral()
         google()
     }
 }
@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     repositories {
         maven { url 'https://download.01.org/crosswalk/releases/crosswalk/android/maven2' }
         mavenCentral()
-        jcenter()
+        mavenCentral()
         google()
         flatDir {
             dirs "$rootDir/app/libs"
