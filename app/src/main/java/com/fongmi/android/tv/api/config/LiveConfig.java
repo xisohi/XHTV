@@ -30,6 +30,7 @@ public class LiveConfig {
     private Config config;
     private boolean sync;
     private Live home;
+    private String newSourceUrl;  //新增字段用于新源地址
 
     private static class Loader {
         static volatile LiveConfig INSTANCE = new LiveConfig();
@@ -73,6 +74,7 @@ public class LiveConfig {
 
     public LiveConfig init() {
         this.home = null;
+        this.newSourceUrl = App.get().getString(R.string.app_source);  //设置默认新源地址
         return config(Config.live());
     }
 
@@ -99,9 +101,11 @@ public class LiveConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            parseConfig(Decoder.getJson(config.getUrl()), callback);
+            // 优先使用 config.getUrl()
+            String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
+            parseConfig(Decoder.getJson(url), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            if (TextUtils.isEmpty(newSourceUrl)) App.post(() -> callback.error(""));
             else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
             e.printStackTrace();
         }

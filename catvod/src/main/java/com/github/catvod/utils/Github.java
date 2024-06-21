@@ -8,18 +8,18 @@ import java.io.File;
 
 public class Github {
 
-    public static final String URL = "https://raw.githubusercontent.com/FongMi/Release/fongmi";
+    //public static final String URL = "https://raw.githubusercontent.com/FongMi/Release/fongmi";
 
     private static String getUrl(String path, String name) {
-        return URL + "/" + path + "/" + name;
+        return path + "/" + name;
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("apk/" + (dev ? "dev" : "release"), name + ".json");
+        return getUrl("https://xhys.lcjly.cn"), "fongmiupdate.json");
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("apk/" + (dev ? "dev" : "release"), name + ".apk");
+        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/fongmi"), name + ".apk");
     }
 
     public static String getSo(String url) {

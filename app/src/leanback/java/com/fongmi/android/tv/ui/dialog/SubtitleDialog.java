@@ -60,7 +60,7 @@ public class SubtitleDialog {
         binding.preview.setStyle(ExoUtil.getCaptionStyle());
         binding.preview.setVisibility(listen ? View.GONE : View.VISIBLE);
         binding.preview.setFixedTextSize(Dimension.SP, value = Setting.getSubtitle());
-        binding.preview.setCues(Arrays.asList(new Cue.Builder().setText("影視天下第一").build()));
+        binding.preview.setCues(Arrays.asList(new Cue.Builder().setText("星輝影視天下第一").build()));
     }
 
     private void initEvent() {
