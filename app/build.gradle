@@ -13,8 +13,8 @@ android {
         minSdk 21
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 240619
-        versionName "2.3.9"
+        versionCode 240
+        versionName "2.4.0"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
