@@ -15,11 +15,11 @@ public class Github {
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("https://xhys.lcjly.cn" , "XHTVupdate.json");
+        return getUrl("https://xhys.lcjly.cn/update" , "release.json");
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/XHTV", name + ".apk");
+        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/release", name + ".apk");
     }
 
     public static String getSo(String url) {
