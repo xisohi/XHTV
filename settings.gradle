@@ -30,6 +30,4 @@ include ':thunder'
 include ':youtube'
 include ':jianpian'
 include ':forcetech'
-include ':ijkplayer'
 rootProject.name = "TV"
-
