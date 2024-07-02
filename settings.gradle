@@ -2,7 +2,7 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
-        mavenCentral()
+        jcenter()
         google()
     }
 }
@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     repositories {
         maven { url 'https://download.01.org/crosswalk/releases/crosswalk/android/maven2' }
         mavenCentral()
-        mavenCentral()
+        jcenter()
         google()
         flatDir {
             dirs "$rootDir/app/libs"
@@ -32,10 +32,7 @@ include ':catvod'
 include ':pyramid'
 include ':quickjs'
 include ':thunder'
-include ':youtube'
 include ':jianpian'
 include ':forcetech'
 include ':ijkplayer'
 rootProject.name = "TV"
-//gradle.ext.androidxMediaModulePrefix = 'media-'
-//apply from: file("../media/core_settings.gradle")
