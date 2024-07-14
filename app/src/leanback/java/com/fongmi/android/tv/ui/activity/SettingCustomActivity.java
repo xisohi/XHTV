@@ -238,6 +238,7 @@ public class SettingCustomActivity extends BaseActivity implements MenuKeyCallba
     public void setCacheDir(String dir) {
         Setting.putThunderCacheDir(dir);
         mBinding.cacheDirText.setText(dir);
+        App.post(() -> Util.restartApp(this), 1000);
     }
 
     @Override
@@ -245,7 +246,7 @@ public class SettingCustomActivity extends BaseActivity implements MenuKeyCallba
         Setting.putLanguage(lang);
         LanguageUtil.setLocale(LanguageUtil.getLocale(Setting.getLanguage()));
         mBinding.languageText.setText((ResUtil.getStringArray(R.array.select_language))[Setting.getLanguage()]);
-        Util.restartApp(this);
+        App.post(() -> Util.restartApp(this), 1000);
     }
 
     @Override
@@ -253,6 +254,7 @@ public class SettingCustomActivity extends BaseActivity implements MenuKeyCallba
         int index = 1;
         Setting.putParseWebView(index);
         mBinding.parseWebviewText.setText(parseWebview[index]);
+        App.post(() -> Util.restartApp(this), 5000);
     }
 
     @Override
