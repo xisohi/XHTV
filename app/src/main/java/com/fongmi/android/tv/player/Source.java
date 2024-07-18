@@ -56,9 +56,6 @@ public class Source {
         if (Thunder.Parser.match(url)) {
             items.add(Thunder.Parser.get(url));
             iterator.remove();
-        } else if (Youtube.Parser.match(url)) {
-            items.add(Youtube.Parser.get(url));
-            iterator.remove();
         }
     }
 

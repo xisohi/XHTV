@@ -144,6 +144,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     private boolean autoMode;
     private boolean useParse;
     private int toggleCount;
+    private int errorCount;
     private int groupSize;
     private Runnable mR1;
     private Runnable mR2;
@@ -1374,6 +1375,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
             case Player.STATE_READY:
                 stopSearch();
                 resetToggle();
+                resetError();
                 hideProgress();
                 mPlayers.reset();
                 setDefaultTrack();
@@ -1413,17 +1415,44 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (isBackground()) return;
-        if (event.getCode() / 1000 == 4 && mPlayers.isExo() && mPlayers.isHard()) onDecode(false);
-        else if (mPlayers.addRetry() > event.getRetry()) onError(event);
+        if (addErrorCount() > 20) onErrorEnd(event);
+        else if (event.getCode() / 1000 == 4 && mPlayers.isExo() && mPlayers.addCount() <= 1) onDecode(false);
+        else if (mPlayers.addRetry() > event.getRetry()) checkError(event);
         else onRefresh();
     }
 
-    private void onError(ErrorEvent event) {
+    private void checkError(ErrorEvent event) {
+        if (getSite().getPlayerType() == -1 && event.isUrl() && event.getRetry() > 0 && getToggleCount() < 2 && mPlayers.getPlayer() != Players.SYS) {
+            toggleCount++;
+            nextPlayer();
+        } else {
+            resetToggle();
+            onError(event);
+        }
+    }
+
+    private void nextPlayer() {
+        mPlayers.nextPlayer();
+        setPlayerView();
+        setDecodeView();
+        onRefresh();
+    }
+
+    private void onErrorEnd(ErrorEvent event) {
+        onErrorPlayer(event);
+        resetError();
+    }
+
+    private void onErrorPlayer(ErrorEvent event) {
         Track.delete(getHistoryKey());
         showError(event.getMsg());
         mClock.setCallback(null);
         mPlayers.reset();
         mPlayers.stop();
+    }
+
+    private void onError(ErrorEvent event) {
+        onErrorPlayer(event);
         startFlow();
     }
 
@@ -1606,6 +1635,14 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
 
     public void resetToggle() {
         this.toggleCount = 0;
+    }
+
+    public int addErrorCount() {
+        return ++errorCount;
+    }
+
+    public void resetError() {
+        this.errorCount = 0;
     }
 
     public int getGroupSize() {
