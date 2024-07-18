@@ -74,6 +74,7 @@ public class Players implements Player.Listener, ParseCallback {
 
     private long position;
     private int decode;
+    private int count;
     private int error;
     private int retry;
 
@@ -145,10 +146,15 @@ public class Players implements Player.Listener, ParseCallback {
         this.position = position;
     }
 
+    public boolean canToggle() {
+        return ++count <= 2;
+    }
+
     public void reset() {
         position = C.TIME_UNSET;
         removeTimeoutCheck();
         stopParse();
+        count = 0;
         error = 0;
         retry = 0;
     }
@@ -187,7 +193,7 @@ public class Players implements Player.Listener, ParseCallback {
         return exoPlayer == null ? 0 : exoPlayer.getBufferedPosition();
     }
 
-    public boolean error() {
+    public boolean retried() {
         return ++retry > ExoUtil.getRetry(error);
     }
 
@@ -272,7 +278,6 @@ public class Players implements Player.Listener, ParseCallback {
     public void toggleDecode(PlayerView exo) {
         Setting.putDecode(decode = isHard() ? SOFT : HARD);
         setup(exo);
-        reset();
     }
 
     public String getPositionTime(long time) {
@@ -533,13 +538,14 @@ public class Players implements Player.Listener, ParseCallback {
     @Override
     public void onPlaybackStateChanged(int state) {
         switch (state) {
-            case Player.STATE_READY:
-                PlayerEvent.ready();
-                break;
             case Player.STATE_IDLE:
+            case Player.STATE_READY:
             case Player.STATE_ENDED:
+                PlayerEvent.state(state);
+                break;
             case Player.STATE_BUFFERING:
                 PlayerEvent.state(state);
+                setPlaybackState(PlaybackStateCompat.STATE_BUFFERING);
                 break;
         }
     }
