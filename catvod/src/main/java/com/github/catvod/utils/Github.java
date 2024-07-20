@@ -15,7 +15,8 @@ public class Github {
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("https://xhys.lcjly.cn/update" , "fongmi.json");    }
+        return getUrl("https://xhys.lcjly.cn/update" , "fongmi.json");
+    }
     public static String getApk(boolean dev, String name) {
         return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/fongmi", name + ".apk");
     }
