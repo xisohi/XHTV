@@ -139,33 +139,19 @@ public class VodConfig {
     }
 
     private void loadConfig(Callback callback) {
-        String url = determineConfigUrl();
-        App.execute(() -> {
-            try {
-                JsonObject jsonObject = Json.parse(Decoder.getJson(url)).getAsJsonObject();
-                App.post(() -> checkJson(jsonObject, callback));
-            } catch (Throwable e) {
-                App.post(() -> handleLoadException(e, callback));
-            }
-        });
-    }
-
-    private String determineConfigUrl() {
-        // 优先使用 config.getUrl(), 如果为空则使用 newSourceUrl
-        return !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
-    }
-
-    private void handleLoadException(Throwable e, Callback callback) {
-        e.printStackTrace();
-        loadCache(callback, e);
+        try {
+            String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
+            JsonObject jsonObject = Json.parse(Decoder.getJson(url)).getAsJsonObject();
+            App.post(() -> checkJson(jsonObject, callback));
+        } catch (Throwable e) {
+            App.post(() -> loadCache(callback, e));
+            e.printStackTrace();
+        }
     }
 
     private void loadCache(Callback callback, Throwable e) {
         if (!TextUtils.isEmpty(config.getJson())) {
-            App.post(() -> {
-                JsonObject jsonObject = Json.parse(config.getJson()).getAsJsonObject();
-                checkJson(jsonObject, callback);
-            });
+            App.post(() -> checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback));
         } else {
             App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
         }
