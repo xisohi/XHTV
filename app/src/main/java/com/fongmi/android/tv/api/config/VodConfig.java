@@ -140,29 +140,24 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
+            // 优先使用 config.getUrl()
             String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
-            JsonObject jsonObject = Json.parse(Decoder.getJson(url)).getAsJsonObject();
-            App.post(() -> checkJson(jsonObject, callback));
+            checkJson(Json.parse(Decoder.getJson(url)).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            App.post(() -> loadCache(callback, e));
+            if (TextUtils.isEmpty(newSourceUrl)) App.post(() -> callback.error(""));
+            else loadCache(callback, e);
             e.printStackTrace();
         }
     }
 
     private void loadCache(Callback callback, Throwable e) {
-        if (!TextUtils.isEmpty(config.getJson())) {
-            App.post(() -> checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback));
-        } else {
-            App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
-        }
+        if (!TextUtils.isEmpty(config.getJson())) checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback);
+        else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
     }
 
     private void loadConfigCache(Callback callback) {
-        if (!TextUtils.isEmpty(config.getJson()) && config.isCache()) {
-            App.post(() -> checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback));
-        } else {
-            loadConfig(callback);
-        }
+        if (!TextUtils.isEmpty(config.getJson()) && config.isCache()) checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback);
+        else loadConfig(callback);
     }
 
     private void checkJson(JsonObject object, Callback callback) {
