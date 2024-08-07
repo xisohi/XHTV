@@ -3,7 +3,7 @@
     <!-- App -->
     <string name="app_name">Starlight TV</string>
     <string name="app_exit">Press back again to exit</string>
-    <string name="app_source">https://tvboxosc.pages.dev/XHYSyuan.json</string>
+    <string name="app_source">https://xhys.lcjly.cn/XHYSyuan.json</string>
 
     <!-- Vod -->
     <string name="vod_last">Last seen <xliff:g name="name">%s</xliff:g></string>
