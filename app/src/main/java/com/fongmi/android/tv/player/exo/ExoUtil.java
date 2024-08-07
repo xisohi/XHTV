@@ -42,7 +42,7 @@ public class ExoUtil {
     }
 
     public static LoadControl buildLoadControl() {
-        return new DefaultLoadControl(Setting.getBuffer());
+        return new DefaultLoadControl();
     }
 
     public static TrackSelector buildTrackSelector() {
