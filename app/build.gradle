@@ -13,8 +13,8 @@ android {
         minSdk 21
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 251
-        versionName "2.5.1"
+        versionCode 257
+        versionName "2.5.7"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -146,7 +146,7 @@ dependencies {
     implementation project(':media-lib-extractor')
     implementation project(':media-lib-ui')
     leanbackImplementation 'androidx.leanback:leanback:1.2.0-alpha04'
-    leanbackImplementation 'me.jessyan:autosize:1.2.1'
+    leanbackImplementation 'com.github.JessYanCoding:AndroidAutoSize:1.2.1'
     mobileImplementation 'androidx.biometric:biometric:1.1.0'
     mobileImplementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     mobileImplementation 'com.google.android.flexbox:flexbox:3.0.0'
