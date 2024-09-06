@@ -157,7 +157,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         Server.get().start();
         setForeground(true);
         setRecyclerView();
-        setSubtitleView();
         setVideoView();
         setViewModel();
         checkLive();
@@ -184,6 +183,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         mBinding.control.action.change.setOnClickListener(view -> onChange());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
+        mBinding.control.action.text.setOnLongClickListener(view -> onTextLong());
         mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
         mBinding.control.action.getRoot().setOnTouchListener(this::onActionTouch);
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
@@ -201,6 +201,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     private void setVideoView() {
         mPlayers.init(mBinding.exo);
         setScale(Setting.getLiveScale());
+        ExoUtil.setSubtitleView(mBinding.exo);
         mBinding.control.action.invert.setActivated(Setting.isInvert());
         mBinding.control.action.across.setActivated(Setting.isAcross());
         mBinding.control.action.change.setActivated(Setting.isChange());
@@ -209,12 +210,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         mBinding.control.action.speed.setEnabled(mPlayers.canAdjustSpeed());
         mBinding.control.action.home.setVisibility(LiveConfig.isOnly() ? View.GONE : View.VISIBLE);
         mBinding.video.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> mPiP.update(getActivity(), view));
-    }
-
-    private void setSubtitleView() {
-        mBinding.exo.getSubtitleView().setApplyEmbeddedFontSizes(false);
-        mBinding.exo.getSubtitleView().setStyle(ExoUtil.getCaptionStyle());
-        mBinding.exo.getSubtitleView().setApplyEmbeddedStyles(!Setting.isCaption());
     }
 
     private void setDecode() {
@@ -411,6 +406,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     private void onChoose() {
         mPlayers.choose(this, mBinding.control.title.getText());
         setRedirect(true);
+    }
+
+    private boolean onTextLong() {
+        onSubtitleClick();
+        return true;
     }
 
     private boolean onActionTouch(View v, MotionEvent e) {
@@ -688,7 +688,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
 
     @Override
     public void onSubtitleClick() {
-        App.post(() -> SubtitleDialog.create().view(mBinding.exo.getSubtitleView()).player(mPlayers).show(this), 200);
+        App.post(this::hideControl, 200);
+        App.post(() -> SubtitleDialog.create().view(mBinding.exo.getSubtitleView()).full(true).show(this), 200);
     }
 
     @Override
@@ -1066,7 +1067,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
             hideUI();
         } else {
             hideInfo();
-            stopService();
+            App.post(mR0, 1000);
             setForeground(true);
             if (isStop()) finish();
         }
@@ -1097,7 +1098,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         super.onResume();
         if (isForeground()) return;
         if (isRedirect()) onPlay();
-        App.removeCallbacks(mR0);
         App.post(mR0, 1000);
         setForeground(true);
         setRedirect(false);
@@ -1138,10 +1138,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopService();
         mClock.release();
         mPlayers.release();
-        App.removeCallbacks(mR0, mR1, mR2, mR3);
+        App.post(mR0, 1000);
+        App.removeCallbacks(mR1, mR2, mR3);
         mViewModel.url.removeObserver(mObserveUrl);
         mViewModel.epg.removeObserver(mObserveEpg);
     }
