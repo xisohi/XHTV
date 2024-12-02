@@ -134,7 +134,7 @@ public class LiveConfig {
     }
 
     private void parseText(String text, Callback callback) {
-        Live live = new Live(parseName(config.getUrl()), config.getUrl()).sync();
+        Live live = new Live(parseName(config.getUrl()), config.getUrl()).check().sync();
         LiveParser.text(live, text);
         lives.add(live);
         setHome(live, true);
@@ -189,7 +189,7 @@ public class LiveConfig {
             live.setApi(parseApi(live.getApi()));
             live.setExt(parseExt(live.getExt()));
             live.setJar(parseJar(live, spider));
-            lives.add(live.sync());
+            lives.add(live.check().sync());
         }
         for (Live live : lives) {
             if (live.getName().equals(config.getHome())) {
