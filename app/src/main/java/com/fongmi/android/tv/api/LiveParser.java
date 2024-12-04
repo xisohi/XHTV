@@ -28,9 +28,10 @@ public class LiveParser {
 
     private static final Pattern CATCHUP_SOURCE = Pattern.compile(".*catchup-source=\"(.?|.+?)\".*");
     private static final Pattern CATCHUP = Pattern.compile(".*catchup=\"(.?|.+?)\".*");
-    private static final Pattern TVG_NAME = Pattern.compile(".*tvg-name=\"(.?|.+?)\".*");
     private static final Pattern TVG_LOGO = Pattern.compile(".*tvg-logo=\"(.?|.+?)\".*");
-    private static final Pattern TVG_URL = Pattern.compile(".*x-tvg-url=\"(.?|.+?)\".*");
+    private static final Pattern TVG_NAME = Pattern.compile(".*tvg-name=\"(.?|.+?)\".*");
+    private static final Pattern TVG_URL = Pattern.compile(".*tvg-url=([^\\s]+)");
+    private static final Pattern URL_TVG = Pattern.compile(".*url-tvg=([^\\s]+)");
     private static final Pattern GROUP = Pattern.compile(".*group-title=\"(.?|.+?)\".*");
     private static final Pattern NAME = Pattern.compile(".*,(.+?)$");
     private static final Pattern M3U = Pattern.compile("#EXTM3U|#EXTINF");
@@ -42,7 +43,7 @@ public class LiveParser {
     }
 
     public static void start(Live live) throws Exception {
-        if (live.getGroups().size() > 0) return;
+        if (!live.getGroups().isEmpty()) return;
         if (live.getType() == 0) text(live, getText(live));
         if (live.getType() == 1) json(live, getText(live));
         if (live.getType() == 3) spider(live, getText(live));
@@ -50,7 +51,7 @@ public class LiveParser {
 
     public static void text(Live live, String text) {
         int number = 0;
-        if (live.getGroups().size() > 0) return;
+        if (!live.getGroups().isEmpty()) return;
         if (M3U.matcher(text).find()) m3u(live, text);
         else if (live.isXtream()) xtream(live);
         else txt(live, text);
@@ -88,7 +89,8 @@ public class LiveParser {
             } else if (line.startsWith("#EXTM3U")) {
                 catchup.setType(extract(line, CATCHUP));
                 catchup.setSource(extract(line, CATCHUP_SOURCE));
-                if (live.getEpg().isEmpty()) live.setEpg(extract(line, TVG_URL));
+                if (live.getEpg().isEmpty()) live.setEpg(extract(line, TVG_URL).replace("\"", ""));
+                if (live.getEpg().isEmpty()) live.setEpg(extract(line, URL_TVG).replace("\"", ""));
             } else if (line.startsWith("#EXTINF:")) {
                 Group group = live.find(Group.create(extract(line, GROUP), live.isPass()));
                 channel = group.find(Channel.create(extract(line, NAME)));
@@ -150,7 +152,7 @@ public class LiveParser {
         if (url.startsWith("file")) return Path.read(url);
         if (url.startsWith("http")) return OkHttp.string(url, header);
         if (url.startsWith("assets") || url.startsWith("proxy")) return getText(UrlUtil.convert(url), header);
-        if (url.length() > 0 && url.length() % 4 == 0) return getText(new String(Base64.decode(url, Base64.DEFAULT)), header);
+        if (!url.isEmpty() && url.length() % 4 == 0) return getText(new String(Base64.decode(url, Base64.DEFAULT)), header);
         return "";
     }
 
@@ -292,6 +294,7 @@ public class LiveParser {
         private void headers(String[] params) {
             if (header == null) header = new HashMap<>();
             for (String param : params) {
+                if (!param.contains("=")) continue;
                 String[] a = param.split("=");
                 header.put(a[0].trim(), a[1].trim().replace("\"", ""));
             }
