@@ -8,6 +8,7 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.api.Decoder;
 import com.fongmi.android.tv.api.LiveParser;
+import com.fongmi.android.tv.api.XtreamParser;
 import com.fongmi.android.tv.api.loader.BaseLoader;
 import com.fongmi.android.tv.bean.Channel;
 import com.fongmi.android.tv.bean.Config;
@@ -39,7 +40,6 @@ public class LiveConfig {
     private Config config;
     private boolean sync;
     private Live home;
-    private String newSourceUrl;  //新增字段用于新源地址
 
     private static class Loader {
         static volatile LiveConfig INSTANCE = new LiveConfig();
@@ -86,7 +86,6 @@ public class LiveConfig {
         this.ads = new ArrayList<>();
         this.rules = new ArrayList<>();
         this.lives = new ArrayList<>();
-        this.newSourceUrl = App.get().getString(R.string.app_source);  //设置默认新源地址
         return config(Config.live());
     }
 
@@ -115,11 +114,10 @@ public class LiveConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            // 优先使用 config.getUrl()
-            String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
-            parseConfig(Decoder.getJson(url), callback);
+            boolean xtream = XtreamParser.isApiUrl(config.getUrl());
+            parseConfig(xtream ? "" : Decoder.getJson(config.getUrl()), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(newSourceUrl)) App.post(() -> callback.error(""));
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
             else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
             e.printStackTrace();
         }
