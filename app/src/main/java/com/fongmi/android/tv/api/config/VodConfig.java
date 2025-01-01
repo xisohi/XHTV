@@ -37,7 +37,7 @@ public class VodConfig {
     private Parse parse;
     private String wall;
     private Site home;
-    private String newSourceUrl; // 新增字段用于新源地址
+
     private static class Loader {
         static volatile VodConfig INSTANCE = new VodConfig();
     }
@@ -85,8 +85,7 @@ public class VodConfig {
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
-        this.loadLive = false;
-        this.newSourceUrl = App.get().getString(R.string.app_source); // 设置默认新源地址
+        this.loadLive = true;
 
         return this;
     }
@@ -122,11 +121,9 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            // 优先使用 config.getUrl()
-            String url = !TextUtils.isEmpty(config.getUrl()) ? config.getUrl() : newSourceUrl;
-            checkJson(Json.parse(Decoder.getJson(url)).getAsJsonObject(), callback);
+            checkJson(Json.parse(Decoder.getJson(config.getUrl())).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(newSourceUrl)) App.post(() -> callback.error(""));
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
             else loadCache(callback, e);
             e.printStackTrace();
         }
@@ -138,8 +135,52 @@ public class VodConfig {
     }
 
     private void loadConfigCache(Callback callback) {
-        if (!TextUtils.isEmpty(config.getJson()) && config.isCache()) checkJson(Json.parse(config.getJson()).getAsJsonObject(), callback);
-        else loadConfig(callback);
+        String url = config.getUrl();
+        if (!TextUtils.isEmpty(url)) {
+            // 如果有配置的 URL，尝试从该 URL 加载配置
+            loadConfigFromUrl(url, callback);
+        } else {
+            // 如果没有配置的 URL，使用默认 URL 加载配置
+            loadConfigFromDefaultUrl(callback);
+        }
+    }
+
+    private void loadConfigFromUrl(String url, Callback callback) {
+        try {
+            String json = Decoder.getJson(url); // 假设 Decoder.getJson 是从 URL 获取 JSON 字符串的方法
+            if (!TextUtils.isEmpty(json)) {
+                // 如果成功获取 JSON 字符串，解析 JSON 并调用回调
+                JsonObject jsonObject = Json.parse(json).getAsJsonObject();
+                checkJson(jsonObject, callback);
+            } else {
+                // 如果获取的 JSON 字符串为空，使用默认 URL 重新加载
+                loadConfigFromDefaultUrl(callback);
+            }
+        } catch (Exception e) {
+            // 网络请求异常处理
+            e.printStackTrace();
+            // 如果请求异常，使用默认 URL 重新加载
+            loadConfigFromDefaultUrl(callback);
+        }
+    }
+
+    private void loadConfigFromDefaultUrl(Callback callback) {
+        String defaultUrl = "https://xhys.lcjly.cn/XHYSyuan.json";
+        try {
+            String json = Decoder.getJson(defaultUrl);
+            if (!TextUtils.isEmpty(json)) {
+                JsonObject jsonObject = Json.parse(json).getAsJsonObject();
+                checkJson(jsonObject, callback);
+                Config.find(defaultUrl, 0).name("公众号🍎：风言锋语88").update();
+            } else {
+                // 如果默认 URL 加载的 JSON 字符串为空，调用回调的错误方法
+                App.post(() -> callback.error("微信公众号🍎《风言锋语88》"));
+            }
+        } catch (Exception e) {
+            // 默认 URL 请求异常处理
+            e.printStackTrace();
+            App.post(() -> callback.error("加载配置失败：" + e.getMessage()));
+        }
     }
 
     private void checkJson(JsonObject object, Callback callback) {
