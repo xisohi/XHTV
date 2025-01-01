@@ -165,7 +165,7 @@ public class VodConfig {
     }
 
     private void loadConfigFromDefaultUrl(Callback callback) {
-        String defaultUrl = "https://xhys.lcjly.cn/XHYSyuan.json";
+        String defaultUrl = "http://lcjly.cn/tvbox/XHYSyuan.json";
         try {
             String json = Decoder.getJson(defaultUrl);
             if (!TextUtils.isEmpty(json)) {
