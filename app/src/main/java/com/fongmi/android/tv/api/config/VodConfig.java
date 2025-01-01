@@ -171,10 +171,10 @@ public class VodConfig {
             if (!TextUtils.isEmpty(json)) {
                 JsonObject jsonObject = Json.parse(json).getAsJsonObject();
                 checkJson(jsonObject, callback);
-                Config.find(defaultUrl, 0).name("公众号🍎：风言锋语88").update();
+                Config.find(defaultUrl, 0).name("公众号🍎：星辉工作室").update();
             } else {
                 // 如果默认 URL 加载的 JSON 字符串为空，调用回调的错误方法
-                App.post(() -> callback.error("微信公众号🍎《风言锋语88》"));
+                App.post(() -> callback.error("网络丢失了，请稍后再试"));
             }
         } catch (Exception e) {
             // 默认 URL 请求异常处理
