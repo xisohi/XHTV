@@ -9,10 +9,10 @@ public class Github {
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("https://xhys.lcjly.cn/update" , "main.json");
+        return getUrl("https://xhys.lcjly.cn/update" , "lkys.json");
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/main", name + ".apk");
+        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/lkys", name + ".apk");
     }
 }
