@@ -13,8 +13,8 @@ android {
         minSdk 21
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 290
-        versionName "2.9.0"
+        versionCode 298
+        versionName "2.9.8"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -34,10 +34,6 @@ android {
         }
         python {
             dimension "api"
-        }
-        x86 {
-            dimension "abi"
-            ndk { abiFilters "x86" }
         }
         arm64_v8a {
             dimension "abi"
@@ -68,11 +64,6 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-
     android.applicationVariants.configureEach { variant ->
         variant.outputs.configureEach { output ->
             outputFileName = "${variant.productFlavors[0].name}-${variant.productFlavors[1].name}-${variant.productFlavors[2].name}.apk"
@@ -88,9 +79,15 @@ android {
     lint {
         disable 'UnsafeOptInUsageError'
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
 }
 
 dependencies {
+    implementation fileTree(dir: "libs", include: ["*.aar"])
     implementation project(':catvod')
     implementation project(':quickjs')
     pythonImplementation project(':chaquo')
@@ -135,17 +132,6 @@ dependencies {
     implementation 'org.fourthline.cling:cling-support:2.1.1'
     implementation 'org.greenrobot:eventbus:3.3.1'
     implementation('org.simpleframework:simple-xml:2.7.1') { exclude group: 'stax', module: 'stax-api' exclude group: 'xpp3', module: 'xpp3' }
-    implementation(ext: 'aar', name: 'dlna-core-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'dlna-dmc-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'dlna-dmr-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'forcetech-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'hook-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'jianpian-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'nanohttpd-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'thunder-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'tvbus-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'youtube-release', group: 'fongmi', version: 'release')
-    implementation(ext: 'aar', name: 'zlive-release', group: 'fongmi', version: 'release')
     leanbackImplementation 'androidx.leanback:leanback:1.2.0-alpha04'
     leanbackImplementation 'com.github.JessYanCoding:AndroidAutoSize:1.2.1'
     mobileImplementation 'androidx.biometric:biometric:1.1.0'
