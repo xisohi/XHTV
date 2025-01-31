@@ -174,6 +174,8 @@ public class TrackNameProvider {
                 return "AMR-WB";
             case MimeTypes.AUDIO_IAMF:
                 return "IAMF";
+            case MimeTypes.AUDIO_AV3A:
+                return "AV3A";
             case MimeTypes.VIDEO_MP4:
                 return "MP4";
             case MimeTypes.VIDEO_FLV:
@@ -192,10 +194,14 @@ public class TrackNameProvider {
                 return "H264";
             case MimeTypes.VIDEO_H265:
                 return "H265";
+            case MimeTypes.VIDEO_VC1:
+                return "VC1";
             case MimeTypes.VIDEO_VP8:
                 return "VP8";
             case MimeTypes.VIDEO_VP9:
                 return "VP9";
+            case MimeTypes.VIDEO_DIVX:
+                return "DIVX";
             case MimeTypes.VIDEO_DOLBY_VISION:
                 return "DOLBY";
 //            case MimeTypes.VIDEO_ProRes:
