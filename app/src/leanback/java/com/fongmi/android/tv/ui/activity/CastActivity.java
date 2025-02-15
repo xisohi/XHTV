@@ -13,7 +13,6 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
-import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.viewbinding.ViewBinding;
 
@@ -36,6 +35,7 @@ import com.fongmi.android.tv.event.PlayerEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.player.Players;
 import com.fongmi.android.tv.player.exo.ExoUtil;
+import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownCast;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
@@ -60,6 +60,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
     private Runnable mR1;
     private Runnable mR2;
     private Clock mClock;
+    private boolean redirect;
     private long position;
     private long duration;
     private int scale;
@@ -123,6 +124,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
         mAction = intent.getParcelableExtra(RendererInterfaceKt.keyExtraCastAction);
         mBinding.widget.waiting.setVisibility(View.GONE);
         mBinding.widget.title.setText(getName());
+        mBinding.widget.title.setSelected(true);
         position = duration = C.TIME_UNSET;
         mService.bindRealPlayer(this);
         start();
@@ -137,6 +139,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
 
     private void setVideoView() {
         mPlayers.init(mBinding.exo);
+        PlaybackService.start(mPlayers);
         setScale(scale = Setting.getScale());
         ExoUtil.setSubtitleView(mBinding.exo);
         findViewById(R.id.timeBar).setNextFocusUpId(R.id.reset);
@@ -185,6 +188,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
 
     private void onChoose() {
         mPlayers.choose(this, mBinding.widget.title.getText());
+        setRedirect(true);
     }
 
     private void onDecode() {
@@ -263,6 +267,18 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
         App.post(mR1, Constant.INTERVAL_HIDE);
     }
 
+    public boolean isRedirect() {
+        return redirect;
+    }
+
+    public void setRedirect(boolean redirect) {
+        this.redirect = redirect;
+    }
+
+    private void checkPlayImg() {
+        ActionEvent.update();
+    }
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
         if (ActionEvent.PLAY.equals(event.getAction()) || ActionEvent.PAUSE.equals(event.getAction())) {
@@ -283,6 +299,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
         switch (event.getState()) {
             case PlayerEvent.PREPARE:
                 setState(RenderState.PREPARING);
+                setDecode();
                 break;
             case Player.STATE_IDLE:
                 setState(RenderState.IDLE);
@@ -293,6 +310,8 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
                 break;
             case Player.STATE_READY:
                 hideProgress();
+                checkPlayImg();
+                mPlayers.reset();
                 setState(RenderState.PLAYING);
                 break;
             case Player.STATE_ENDED:
@@ -301,7 +320,6 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
                 break;
             case PlayerEvent.TRACK:
                 setMetadata();
-                mPlayers.reset();
                 setTrackVisible();
                 mClock.setCallback(this);
                 break;
@@ -324,17 +342,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (mPlayers.retried()) onError(event);
-        else if (event.isExo()) onCheck(event);
         else onReset();
-    }
-
-    private void onCheck(ErrorEvent event) {
-        if (event.getCode() == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) mPlayers.seekToDefaultPosition();
-        else if (event.getCode() == PlaybackException.ERROR_CODE_IO_UNSPECIFIED || event.getCode() >= PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED && event.getCode() <= PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED) mPlayers.setFormat(ExoUtil.getMimeType(event.getCode()));
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED && mPlayers.isSoft()) mPlayers.init(mBinding.exo);
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED && mPlayers.isHard()) onDecode();
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODING_FAILED && mPlayers.isHard()) onDecode();
-        else onError(event);
     }
 
     private void onError(ErrorEvent event) {
@@ -346,6 +354,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
     private void onPaused() {
         setState(RenderState.PAUSED);
         mPlayers.pause();
+        checkPlayImg();
         showInfo();
     }
 
@@ -353,6 +362,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
         if (mPlayers.isEmpty()) return;
         setState(RenderState.PLAYING);
         mPlayers.play();
+        checkPlayImg();
         hideCenter();
     }
 
@@ -497,17 +507,30 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        mClock.stop().start();
+        onPlay();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
-        mClock.start();
-        onPlay();
+        if (isRedirect()) onPlay();
+        setRedirect(false);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mPlayers.pause();
-        mClock.stop();
+        if (isRedirect()) onPaused();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (Setting.isBackgroundOff()) onPaused();
+        if (Setting.isBackgroundOff()) mClock.stop();
     }
 
     @Override
@@ -527,6 +550,7 @@ public class CastActivity extends BaseActivity implements CustomKeyDownCast.List
         mClock.release();
         mPlayers.release();
         unbindService(this);
+        PlaybackService.stop();
         mService.bindRealPlayer(null);
         App.removeCallbacks(mR1, mR2);
     }

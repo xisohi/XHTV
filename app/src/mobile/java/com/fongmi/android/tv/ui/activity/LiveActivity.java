@@ -16,7 +16,6 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.C;
-import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.viewbinding.ViewBinding;
 
@@ -89,12 +88,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     private Players mPlayers;
     private Channel mChannel;
     private Group mGroup;
-    private Runnable mR0;
     private Runnable mR1;
     private Runnable mR2;
     private Runnable mR3;
     private Clock mClock;
-    private boolean foreground;
     private boolean initTrack;
     private boolean redirect;
     private boolean rotate;
@@ -150,13 +147,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         mObserveEpg = this::setEpg;
         mObserveUrl = this::start;
         mHides = new ArrayList<>();
-        mR0 = this::stopService;
         mR1 = this::hideControl;
         mR2 = this::setTraffic;
         mR3 = this::hideInfo;
         mPiP = new PiP();
         Server.get().start();
-        setForeground(true);
         setRecyclerView();
         setVideoView();
         setViewModel();
@@ -201,6 +196,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
 
     private void setVideoView() {
         mPlayers.init(mBinding.exo);
+        PlaybackService.start(mPlayers);
         setScale(Setting.getLiveScale());
         ExoUtil.setSubtitleView(mBinding.exo);
         mBinding.control.action.invert.setActivated(Setting.isInvert());
@@ -607,6 +603,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         mViewModel.getEpg(mChannel);
         mBinding.widget.play.setText("");
         mChannel.loadLogo(mBinding.widget.logo);
+        mBinding.control.title.setSelected(true);
         mBinding.widget.name.setText(mChannel.getName());
         mBinding.control.title.setText(mChannel.getName());
         mBinding.widget.namePip.setText(mChannel.getName());
@@ -658,8 +655,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         mPlayers.start(result, getTimeout());
     }
 
-    private void checkPlayImg(boolean playing) {
-        mPiP.update(this, playing);
+    private void checkPlayImg() {
+        mPiP.update(this, mPlayers.isPlaying());
         ActionEvent.update();
     }
 
@@ -756,13 +753,15 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         switch (event.getState()) {
             case PlayerEvent.PREPARE:
                 setInitTrack(true);
+                setDecode();
                 break;
             case Player.STATE_BUFFERING:
                 showProgress();
                 break;
             case Player.STATE_READY:
                 hideProgress();
-                checkPlayImg(mPlayers.isPlaying());
+                checkPlayImg();
+                mPlayers.reset();
                 break;
             case Player.STATE_ENDED:
                 checkNext();
@@ -770,7 +769,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
             case PlayerEvent.TRACK:
                 setMetadata();
                 setInitTrack();
-                mPlayers.reset();
                 setTrackVisible();
                 break;
             case PlayerEvent.SIZE:
@@ -802,17 +800,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (mPlayers.retried()) onError(event);
-        else if (event.isExo()) onCheck(event);
         else fetch();
-    }
-
-    private void onCheck(ErrorEvent event) {
-        if (event.getCode() == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) mPlayers.seekToDefaultPosition();
-        else if (event.getCode() == PlaybackException.ERROR_CODE_IO_UNSPECIFIED || event.getCode() >= PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED && event.getCode() <= PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED) mPlayers.setFormat(ExoUtil.getMimeType(event.getCode()));
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED && mPlayers.isSoft()) mPlayers.init(mBinding.exo);
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED && mPlayers.isHard()) onDecode();
-        else if (event.getCode() == PlaybackException.ERROR_CODE_DECODING_FAILED && mPlayers.isHard()) onDecode();
-        else onError(event);
     }
 
     private void onError(ErrorEvent event) {
@@ -895,21 +883,13 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     }
 
     private void onPaused() {
-        checkPlayImg(false);
         mPlayers.pause();
+        checkPlayImg();
     }
 
     private void onPlay() {
-        checkPlayImg(true);
         mPlayers.play();
-    }
-
-    public boolean isForeground() {
-        return foreground;
-    }
-
-    public void setForeground(boolean foreground) {
-        this.foreground = foreground;
+        checkPlayImg();
     }
 
     private boolean isInitTrack() {
@@ -959,10 +939,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
 
     public void setLock(boolean lock) {
         this.lock = lock;
-    }
-
-    private void stopService() {
-        PlaybackService.stop();
     }
 
     @Override
@@ -1081,14 +1057,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, @NonNull Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
         if (isInPictureInPictureMode) {
-            PlaybackService.start(mPlayers);
             hideControl();
             hideInfo();
             hideUI();
         } else {
             hideInfo();
-            App.post(mR0, 1000);
-            setForeground(true);
             if (isStop()) finish();
         }
     }
@@ -1116,20 +1089,14 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
     @Override
     protected void onResume() {
         super.onResume();
-        if (isForeground()) return;
         if (isRedirect()) onPlay();
-        App.post(mR0, 1000);
-        setForeground(true);
         setRedirect(false);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        setForeground(false);
-        App.removeCallbacks(mR0);
         if (isRedirect()) onPaused();
-        if (Setting.isBackgroundOn() && !isFinishing()) PlaybackService.start(mPlayers);
     }
 
     @Override
@@ -1160,7 +1127,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDownLive.List
         super.onDestroy();
         mClock.release();
         mPlayers.release();
-        App.post(mR0, 1000);
+        PlaybackService.stop();
         App.removeCallbacks(mR1, mR2, mR3);
         mViewModel.url.removeObserver(mObserveUrl);
         mViewModel.epg.removeObserver(mObserveEpg);
