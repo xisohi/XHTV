@@ -79,12 +79,27 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void initView() {
-        binding.text.setText(url = getUrl());
-        binding.text.setSelection(TextUtils.isEmpty(url) ? 0 : url.length());
-        binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
+        String address = Server.get().getAddress();
+        //  binding.text.setText(url = getUrl());
+        // 这里判断有名字就不会写到设置框里，例如名字是：源已内置
+        if (TextUtils.isEmpty(getName())) {
+            binding.text.setText(url = getUrl());
+        }
         binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
         binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
         binding.storage.setVisibility(PermissionX.isGranted(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ? View.GONE : View.VISIBLE);
+    }
+    private String getName() {
+        switch (type) {
+            case 0:
+                return VodConfig.get().getConfig().getName();
+            case 1:
+                return LiveConfig.get().getConfig().getName();
+            case 2:
+                return WallConfig.get().getConfig().getName();
+            default:
+                return "";
+        }
     }
 
     private void initEvent() {
@@ -139,12 +154,15 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void onPositive(View view) {
-        String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
         if (edit) Config.find(url, type).url(text).update();
-        if (text.isEmpty()) Config.delete(url, type);
-        if (name.isEmpty()) callback.setConfig(Config.find(text, type));
-        else callback.setConfig(Config.find(text, name, type));
+        //  if (text.isEmpty()) Config.delete(url, type);
+        if (text.isEmpty()) {
+            url = "http://lcjly.cn/tvbox/XHYSyuan.json";
+            Config.find(url, 1).name("公众号：星辉工作室").update();
+            //Config.delete(ori, type);
+        }
+        callback.setConfig(Config.find(text, type));
         dialog.dismiss();
     }
 
