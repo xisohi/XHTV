@@ -26,7 +26,7 @@ public class Updater implements Download.Callback {
     private DialogUpdateBinding binding;
     private AlertDialog dialog;
     private boolean dev;
-    private String apkUrl; // 添加一个成员变量来存储 APK 的下载地址
+    private String apkUrl; // 用于存储 APK 的下载地址
 
     private static class Loader {
         static volatile Updater INSTANCE = new Updater();
@@ -42,12 +42,6 @@ public class Updater implements Download.Callback {
 
     private String getJson() {
         return Github.getJson(dev, BuildConfig.FLAVOR_mode);
-    }
-
-    private String getApk(JSONObject json) {
-        String apkUrl = json.optString("apkurl");
-        String name = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi;
-        return apkUrl.replace("{name}", name);
     }
 
     public Updater force() {
@@ -85,8 +79,8 @@ public class Updater implements Download.Callback {
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
+            apkUrl = object.optString("apkurl"); // 从 JSON 中获取 APK 的下载地址
             if (need(code, name)) {
-                apkUrl = getApk(object); // 获取 APK 的下载地址并存储到成员变量中
                 App.post(() -> show(activity, name, desc));
             }
         } catch (Exception e) {
@@ -114,7 +108,7 @@ public class Updater implements Download.Callback {
 
     private void confirm(View view) {
         binding.confirm.setEnabled(false);
-        Download.create(apkUrl, getFile(), this).start(); // 使用成员变量 apkUrl
+        Download.create(apkUrl, getFile(), this).start(); // 使用从 JSON 中解析的 APK 地址
     }
 
     private void dismiss() {
