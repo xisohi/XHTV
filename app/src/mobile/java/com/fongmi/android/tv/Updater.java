@@ -80,7 +80,13 @@ public class Updater implements Download.Callback {
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            apkUrl = object.optString("apkurl"); // 从 JSON 中获取 APK 的下载地址
+            String apkUrlTemplate = object.optString("apkurl"); // 获取 APK URL 模板
+
+            // 替换 {name} 占位符为实际的 APK 文件名
+            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
+            apkUrl = apkUrlTemplate.replace("{name}", apkName);
+
+            Log.d("Updater", "APK 下载地址: " + apkUrl); // 打印 APK 下载地址
             if (need(code, name)) {
                 App.post(() -> show(activity, name, desc));
             }
