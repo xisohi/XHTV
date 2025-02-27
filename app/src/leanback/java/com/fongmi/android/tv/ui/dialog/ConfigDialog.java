@@ -1,6 +1,5 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.Manifest;
 import android.content.DialogInterface;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -21,10 +20,10 @@ import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.impl.ConfigCallback;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
+import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.QRCode;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.permissionx.guolindev.PermissionX;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -87,7 +86,6 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
         }
         binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
         binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
-        binding.storage.setVisibility(PermissionX.isGranted(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) ? View.GONE : View.VISIBLE);
     }
     private String getName() {
         switch (type) {
@@ -104,7 +102,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
 
     private void initEvent() {
         EventBus.getDefault().register(this);
-        binding.storage.setOnClickListener(this::onStorage);
+        binding.choose.setOnClickListener(this::onChoose);
         binding.positive.setOnClickListener(this::onPositive);
         binding.negative.setOnClickListener(this::onNegative);
         binding.text.addTextChangedListener(new CustomTextListener() {
@@ -132,8 +130,9 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
         }
     }
 
-    private void onStorage(View view) {
-        PermissionX.init(activity).permissions(Manifest.permission.WRITE_EXTERNAL_STORAGE).request((allGranted, grantedList, deniedList) -> binding.storage.setVisibility(allGranted ? View.GONE : View.VISIBLE));
+    private void onChoose(View view) {
+        FileChooser.from(activity).show();
+        dialog.dismiss();
     }
 
     private void detect(String s) {
