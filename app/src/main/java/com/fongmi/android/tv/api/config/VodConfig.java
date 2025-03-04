@@ -123,9 +123,9 @@ public class VodConfig {
     private void loadConfigFromUrl(String url, Callback callback) {
         try {
             OkHttp.cancel("vod");
-            String json = Decoder.getJson(url); // 假设 Decoder.getJson 是从 URL 获取 JSON 字符串的方法
+            String tag = "vod"; // 示例 tag 参数
+            String json = Decoder.getJson(url, tag); // 传递两个参数
             if (!TextUtils.isEmpty(json)) {
-                // 如果成功获取 JSON 字符串，解析 JSON 并调用回调
                 JsonObject jsonObject = Json.parse(json).getAsJsonObject();
                 checkJson(jsonObject, callback);
             } else {
@@ -139,10 +139,12 @@ public class VodConfig {
             loadConfigFromDefaultUrl(callback);
         }
     }
+
     private void loadConfigFromDefaultUrl(Callback callback) {
         String defaultUrl = "http://lcjly.cn/tvbox/XHYSyuan.json";
         try {
-            String json = Decoder.getJson(defaultUrl);
+            String tag = "vod"; // 示例 tag 参数
+            String json = Decoder.getJson(defaultUrl, tag); // 传递两个参数
             if (!TextUtils.isEmpty(json)) {
                 JsonObject jsonObject = Json.parse(json).getAsJsonObject();
                 checkJson(jsonObject, callback);
