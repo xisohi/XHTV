@@ -77,7 +77,11 @@ public class Updater implements Download.Callback {
 
     private void doInBackground(Activity activity) {
         try {
-            JSONObject object = new JSONObject(OkHttp.string(getJson()));
+            Log.d("Updater", "开始检查更新...");
+            String jsonResponse = OkHttp.string(getJson());
+            Log.d("Updater", "获取到的 JSON 数据: " + jsonResponse);
+
+            JSONObject object = new JSONObject(jsonResponse);
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
@@ -87,13 +91,18 @@ public class Updater implements Download.Callback {
             String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
             apkUrl = apkUrlTemplate.replace("{name}", apkName);
 
-            Log.d("Updater", "APK 下载地址: " + apkUrl); // 打印 APK 下载地址
+            if (!apkUrl.isEmpty()) {
+                Log.d("Updater", "APK 下载地址: " + apkUrl);
+            } else {
+                Log.e("Updater", "APK 下载地址为空");
+            }
 
             if (need(code, name)) {
                 App.post(() -> show(activity, name, desc));
             }
         } catch (Exception e) {
             e.printStackTrace();
+            Log.e("Updater", "检查更新失败", e);
         }
     }
 
