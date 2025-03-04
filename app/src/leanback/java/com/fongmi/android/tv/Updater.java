@@ -25,10 +25,10 @@ import java.util.Locale;
 public class Updater implements Download.Callback {
 
     private DialogUpdateBinding binding;
-    private final Download download;
     private AlertDialog dialog;
     private boolean dev;
     private String apkUrl; // 用于存储 APK 的下载地址
+    private Download download; // 延迟初始化
 
     private File getFile() {
         return Path.cache("update.apk");
@@ -38,16 +38,12 @@ public class Updater implements Download.Callback {
         return Github.getJson(dev, BuildConfig.FLAVOR_mode);
     }
 
-    private String getApk() {
-        return Github.getApk(dev, BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi);
-    }
-
     public static Updater create() {
         return new Updater();
     }
 
     public Updater() {
-        this.download = Download.create(apkUrl, getFile(), this);
+        // 不在构造函数中初始化 Download 对象
     }
 
     public Updater force() {
@@ -106,22 +102,30 @@ public class Updater implements Download.Callback {
         binding.version.setText(ResUtil.getString(R.string.update_version, version));
         binding.confirm.setOnClickListener(this::confirm);
         binding.cancel.setOnClickListener(this::cancel);
-        check().create(activity).show();
+        dialog = create(activity);
+        dialog.show();
         binding.desc.setText(desc);
     }
 
     private AlertDialog create(Activity activity) {
-        return dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).setCancelable(false).create();
+        return new MaterialAlertDialogBuilder(activity)
+                .setView(binding.getRoot())
+                .setCancelable(false)
+                .create();
     }
 
     private void cancel(View view) {
         Setting.putUpdate(false);
-        download.cancel();
+        if (download != null) {
+            download.cancel();
+        }
         dismiss();
     }
 
     private void confirm(View view) {
         binding.confirm.setEnabled(false);
+        // 在确认时初始化 Download 对象
+        download = Download.create(apkUrl, getFile(), this);
         download.start();
     }
 

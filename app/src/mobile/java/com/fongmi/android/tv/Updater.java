@@ -2,9 +2,10 @@ package com.fongmi.android.tv;
 
 import android.app.Activity;
 import android.content.DialogInterface;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.util.Log;
+
 import androidx.appcompat.app.AlertDialog;
 
 import com.fongmi.android.tv.databinding.DialogUpdateBinding;
@@ -25,10 +26,10 @@ import java.util.Locale;
 public class Updater implements Download.Callback {
 
     private DialogUpdateBinding binding;
-    private final Download download;
     private AlertDialog dialog;
     private boolean dev;
     private String apkUrl; // 用于存储 APK 的下载地址
+    private Download download; // 延迟初始化
 
     private File getFile() {
         return Path.cache("update.apk");
@@ -38,16 +39,12 @@ public class Updater implements Download.Callback {
         return Github.getJson(dev, BuildConfig.FLAVOR_mode);
     }
 
-    private String getApk() {
-        return Github.getApk(dev, BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi);
-    }
-
     public static Updater create() {
         return new Updater();
     }
 
     public Updater() {
-        this.download = Download.create(apkUrl, getFile(), this);
+        // 不在构造函数中初始化 Download 对象
     }
 
     public Updater force() {
@@ -92,6 +89,7 @@ public class Updater implements Download.Callback {
             apkUrl = apkUrlTemplate.replace("{name}", apkName);
 
             Log.d("Updater", "APK 下载地址: " + apkUrl); // 打印 APK 下载地址
+
             if (need(code, name)) {
                 App.post(() -> show(activity, name, desc));
             }
@@ -102,24 +100,35 @@ public class Updater implements Download.Callback {
 
     private void show(Activity activity, String version, String desc) {
         binding = DialogUpdateBinding.inflate(LayoutInflater.from(activity));
-        check().create(activity, ResUtil.getString(R.string.update_version, version)).show();
+        dialog = create(activity, ResUtil.getString(R.string.update_version, version));
+        dialog.show();
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(this::confirm);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(this::cancel);
         binding.desc.setText(desc);
     }
 
     private AlertDialog create(Activity activity, String title) {
-        return dialog = new MaterialAlertDialogBuilder(activity).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
+        return new MaterialAlertDialogBuilder(activity)
+                .setTitle(title)
+                .setView(binding.getRoot())
+                .setPositiveButton(R.string.update_confirm, null)
+                .setNegativeButton(R.string.dialog_negative, null)
+                .setCancelable(false)
+                .create();
     }
 
     private void cancel(View view) {
         Setting.putUpdate(false);
-        download.cancel();
+        if (download != null) {
+            download.cancel();
+        }
         dialog.dismiss();
     }
 
     private void confirm(View view) {
         view.setEnabled(false);
+        // 在确认时初始化 Download 对象
+        download = Download.create(apkUrl, getFile(), this);
         download.start();
     }
 
