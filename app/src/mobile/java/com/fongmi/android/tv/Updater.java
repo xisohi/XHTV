@@ -25,17 +25,10 @@ import java.util.Locale;
 public class Updater implements Download.Callback {
 
     private DialogUpdateBinding binding;
+    private final Download download;
     private AlertDialog dialog;
     private boolean dev;
     private String apkUrl; // 用于存储 APK 的下载地址
-
-    private static class Loader {
-        static volatile Updater INSTANCE = new Updater();
-    }
-
-    public static Updater get() {
-        return Loader.INSTANCE;
-    }
 
     private File getFile() {
         return Path.cache("update.apk");
@@ -43,6 +36,18 @@ public class Updater implements Download.Callback {
 
     private String getJson() {
         return Github.getJson(dev, BuildConfig.FLAVOR_mode);
+    }
+
+    private String getApk() {
+        return Github.getApk(dev, BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi);
+    }
+
+    public static Updater create() {
+        return new Updater();
+    }
+
+    public Updater() {
+        this.download = Download.create(apkUrl, getFile(), this);
     }
 
     public Updater force() {
@@ -109,11 +114,13 @@ public class Updater implements Download.Callback {
 
     private void cancel(View view) {
         Setting.putUpdate(false);
+        download.cancel();
         dialog.dismiss();
     }
 
     private void confirm(View view) {
-        Download.create(apkUrl, getFile(), this).start(); // 使用从 JSON 中解析的 APK 地址        view.setEnabled(false);
+        view.setEnabled(false);
+        download.start();
     }
 
     private void dismiss() {

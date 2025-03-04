@@ -122,6 +122,7 @@ public class VodConfig {
 
     private void loadConfigFromUrl(String url, Callback callback) {
         try {
+            OkHttp.cancel("vod");
             String json = Decoder.getJson(url); // 假设 Decoder.getJson 是从 URL 获取 JSON 字符串的方法
             if (!TextUtils.isEmpty(json)) {
                 // 如果成功获取 JSON 字符串，解析 JSON 并调用回调
@@ -163,7 +164,7 @@ public class VodConfig {
     }
 
     private void checkJson(JsonObject object, Callback callback) {
-        if (object.has("msg") && callback != null) {
+        if (object.has("msg")) {
             App.post(() -> callback.error(object.get("msg").getAsString()));
         } else if (object.has("urls")) {
             parseDepot(object, callback);
