@@ -110,7 +110,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         if (!customWall()) return;
 
         // 网络图片的 URL
-        final String imageUrl = "https://example.com/your-background-image.jpg";
+        final String imageUrl = "https://xhys.lcjly.cn/image/1280720001.jpg";
 
         // 在后台线程中加载网络图片
         new Thread(new Runnable() {
