@@ -8,7 +8,6 @@ import java.io.File;
 
 public class Github {
 
-    // public static final String URL = "https://xhys.lcjly.cn";
 
     private static String getUrl(String path, String name) {
         return path + "/" + name;
@@ -19,7 +18,7 @@ public class Github {
     }
 
     public static String getApk(boolean dev, String name) {
-        return getUrl("https://mirror.ghproxy.com/https://github.com/xisohi/TVBoxOSC/releases/download/release", name + ".apk");
+        return getUrl("https://ghfast.top/https://github.com/xisohi/TVBoxOSC/releases/download/release", name + ".apk");
     }
 
     public static String getSo(String url) {
