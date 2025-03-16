@@ -189,7 +189,6 @@ public class VodConfig {
             initSite(object);
             initParse(object);
             initOther(object);
-            BaseLoader.get().parseJar(Json.safeString(object, "spider"));
             if (loadLive && object.has("lives")) initLive(object);
             String notice = Json.safeString(object, "notice");
             config.logo(Json.safeString(object, "logo"));
@@ -208,6 +207,7 @@ public class VodConfig {
             return;
         }
         String spider = Json.safeString(object, "spider");
+        BaseLoader.get().parseJar(spider, true);
         for (JsonElement element : Json.safeListElement(object, "sites")) {
             Site site = Site.objectFrom(element);
             if (sites.contains(site)) continue;
