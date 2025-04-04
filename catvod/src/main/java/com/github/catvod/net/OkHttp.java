@@ -40,6 +40,11 @@ public class OkHttp {
         defaultSelector = ProxySelector.getDefault();
     }
 
+    public static void cancel(String tag) {
+        for (Call call : client().dispatcher().queuedCalls()) if (tag.equals(call.request().tag())) call.cancel();
+        for (Call call : client().dispatcher().runningCalls()) if (tag.equals(call.request().tag())) call.cancel();
+    }
+
     private static class Loader {
         static volatile OkHttp INSTANCE = new OkHttp();
     }

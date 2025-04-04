@@ -16,7 +16,7 @@ public class Download {
 
     private final File file;
     private final String url;
-    private final Callback callback;
+    private Callback callback;
 
     public static Download create(String url, File file) {
         return create(url, file, null);
@@ -36,6 +36,12 @@ public class Download {
         if (url.startsWith("file")) return;
         if (callback == null) doInBackground();
         else App.execute(this::doInBackground);
+    }
+
+    public void cancel() {
+        OkHttp.cancel(url);
+        Path.clear(file);
+        callback = null;
     }
 
     private void doInBackground() {
