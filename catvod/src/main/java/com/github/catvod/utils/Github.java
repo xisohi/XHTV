@@ -17,10 +17,6 @@ public class Github {
         return getUrl("https://xhys.lcjly.cn/update" , "release.json");
     }
 
-    public static String getApk(boolean dev, String name) {
-        return getUrl("https://ghfast.top/https://github.com/xisohi/TVBoxOSC/releases/download/release", name + ".apk");
-    }
-
     public static String getSo(String url) {
         try {
             File file = new File(Path.so(), Uri.parse(url).getLastPathSegment());

@@ -27,7 +27,8 @@ public class Updater implements Download.Callback {
     private DialogUpdateBinding binding;
     private AlertDialog dialog;
     private boolean dev;
-
+    private String apkUrl; // 用于存储 APK 的下载地址
+    private Download download; // 延迟初始化
     private static class Loader {
         static volatile Updater INSTANCE = new Updater();
     }
@@ -42,10 +43,6 @@ public class Updater implements Download.Callback {
 
     private String getJson() {
         return Github.getJson(dev, BuildConfig.FLAVOR_mode);
-    }
-
-    private String getApk() {
-        return Github.getApk(dev, BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi);
     }
 
     public Updater force() {
@@ -79,36 +76,67 @@ public class Updater implements Download.Callback {
 
     private void doInBackground(Activity activity) {
         try {
-            JSONObject object = new JSONObject(OkHttp.string(getJson()));
+            Log.d("Updater", "开始检查更新...");
+            String jsonResponse = OkHttp.string(getJson());
+            Log.d("Updater", "获取到的 JSON 数据: " + jsonResponse);
+
+            JSONObject object = new JSONObject(jsonResponse);
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            if (need(code, name)) App.post(() -> show(activity, name, desc));
+            String apkUrlTemplate = object.optString("apkurl"); // 获取 APK URL 模板
+
+            // 替换 {name} 占位符为实际的 APK 文件名
+            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
+            apkUrl = apkUrlTemplate.replace("{name}", apkName);
+
+            if (!apkUrl.isEmpty()) {
+                Log.d("Updater", "APK 下载地址: " + apkUrl);
+            } else {
+                Log.e("Updater", "APK 下载地址为空");
+            }
+
+            if (need(code, name)) {
+                App.post(() -> show(activity, name, desc));
+            }
         } catch (Exception e) {
             e.printStackTrace();
+            Log.e("Updater", "检查更新失败", e);
         }
     }
 
     private void show(Activity activity, String version, String desc) {
         binding = DialogUpdateBinding.inflate(LayoutInflater.from(activity));
-        check().create(activity, ResUtil.getString(R.string.update_version, version)).show();
+        dialog = create(activity, ResUtil.getString(R.string.update_version, version));
+        dialog.show();
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(this::confirm);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(this::cancel);
         binding.desc.setText(desc);
     }
 
     private AlertDialog create(Activity activity, String title) {
-        return dialog = new MaterialAlertDialogBuilder(activity).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
+        return new MaterialAlertDialogBuilder(activity)
+                .setTitle(title)
+                .setView(binding.getRoot())
+                .setPositiveButton(R.string.update_confirm, null)
+                .setNegativeButton(R.string.dialog_negative, null)
+                .setCancelable(false)
+                .create();
     }
 
     private void cancel(View view) {
         Setting.putUpdate(false);
+        if (download != null) {
+            download.cancel();
+        }
         dialog.dismiss();
     }
 
     private void confirm(View view) {
-        Download.create(getApk(), getFile(), this).start();
         view.setEnabled(false);
+        // 在确认时初始化 Download 对象
+        download = Download.create(apkUrl, getFile(), this);
+        download.start();
     }
 
     private void dismiss() {
