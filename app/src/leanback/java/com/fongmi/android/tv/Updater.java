@@ -93,6 +93,9 @@ public class Updater implements Download.Callback {
             String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
             apkUrl = apkUrlTemplate.replace("{name}", apkName);
 
+            // 添加日志输出，打印拼接后的 APK 下载地址
+            Log.d("Updater", "拼接后的 APK 下载地址: " + apkUrl);
+
             if (!apkUrl.isEmpty()) {
                 Log.d("Updater", "APK 下载地址: " + apkUrl);
             } else {
