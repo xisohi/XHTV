@@ -38,7 +38,9 @@ public class Updater implements Download.Callback {
     }
 
     private File getFile() {
-        return Path.cache("update.apk");
+        File file = Path.cache("update.apk");
+        Log.d("Updater", "下载文件路径: " + file.getAbsolutePath());
+        return file;
     }
 
     private String getJson() {
