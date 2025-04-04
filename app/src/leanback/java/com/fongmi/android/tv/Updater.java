@@ -20,7 +20,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Locale;
 
 public class Updater implements Download.Callback {
@@ -93,9 +92,6 @@ public class Updater implements Download.Callback {
             String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
             apkUrl = apkUrlTemplate.replace("{name}", apkName);
 
-            // 添加日志输出，打印拼接后的 APK 下载地址
-            Log.d("Updater", "拼接后的 APK 下载地址: " + apkUrl);
-
             if (!apkUrl.isEmpty()) {
                 Log.d("Updater", "APK 下载地址: " + apkUrl);
             } else {
@@ -163,22 +159,7 @@ public class Updater implements Download.Callback {
 
     @Override
     public void success(File file) {
-        // 确保 APK 文件存在且未损坏
-        if (file.exists() && file.length() > 0) {
-            Log.d("Updater", "APK 文件存在且大小大于 0");
-            try {
-                Log.d("Updater", "尝试打开 APK 文件: " + file.getAbsolutePath());
-                FileUtil.openFile(file);
-                Log.d("Updater", "APK 文件打开成功");
-            } catch (Exception e) { // 捕获所有可能的异常
-                e.printStackTrace();
-                Log.e("Updater", "打开 APK 文件失败", e);
-                Notify.show("打开 APK 文件失败: " + e.getMessage());
-            }
-        } else {
-            Log.e("Updater", "APK 文件不存在或大小为 0");
-            Notify.show("APK 文件不存在或大小为 0");
-        }
+        FileUtil.openFile(file);
         dismiss();
     }
 }
