@@ -88,7 +88,7 @@ public class Updater implements Download.Callback {
             String apkUrlTemplate = object.optString("apkurl"); // 获取 APK URL 模板
 
             // 替换 {name} 占位符为实际的 APK 文件名
-            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_api + "-" + BuildConfig.FLAVOR_abi + ".apk";
+            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi + ".apk";
             apkUrl = apkUrlTemplate.replace("{name}", apkName);
 
             if (!apkUrl.isEmpty()) {
