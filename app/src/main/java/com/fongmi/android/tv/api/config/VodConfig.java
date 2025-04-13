@@ -141,7 +141,7 @@ public class VodConfig {
     }
 
     private void loadConfigFromDefaultUrl(Callback callback) {
-        String defaultUrl = "http://lcjly.cn/tvbox/XHYSyuan.json";
+        String defaultUrl = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
         try {
             String tag = "vod"; // 示例 tag 参数
             String json = Decoder.getJson(defaultUrl, tag); // 传递两个参数

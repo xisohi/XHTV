@@ -157,7 +157,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
         if (edit) Config.find(url, type).url(text).update();
         //  if (text.isEmpty()) Config.delete(url, type);
         if (text.isEmpty()) {
-            url = "http://xhys.lcjly.cn/XHYSyuan.json";
+            url = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
             Config.find(url, 1).name("公众号：星辉影视").update();
             //Config.delete(ori, type);
         }
