@@ -142,12 +142,25 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     private void onPositive(View view) {
         String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
-        // 禁止修改内置源的真实地址
-        if (TextUtils.equals(url, Constants.BUILTIN_URL) && !text.equals(Constants.BUILTIN_PLACEHOLDER)) {
+        // 1. 禁止使用占位符
+        if (TextUtils.equals(text, Constants.BUILTIN_PLACEHOLDER)) {
+            Notify.show("禁止使用内置占位符");
+            return;
+        }
+
+        // 2. 禁止添加与内置源相同的 URL
+        if (TextUtils.equals(text, Constants.BUILTIN_URL)) {
             Notify.show("此地址为内置配置，请使用其他URL");
             return;
         }
-        // 恢复占位符为真实地址后再保存
+
+        // 3. 禁止修改内置源的真实地址
+        if (TextUtils.equals(url, Constants.BUILTIN_URL) && !text.equals(Constants.BUILTIN_PLACEHOLDER)) {
+            Notify.show("禁止修改内置源的真实地址");
+            return;
+        }
+
+        // 恢复占位符为真实地址
         if (TextUtils.equals(text, Constants.BUILTIN_PLACEHOLDER)) text = Constants.BUILTIN_URL;
         if (edit) Config.find(url, type).url(text).update();
         if (text.isEmpty()) Config.delete(url, type);

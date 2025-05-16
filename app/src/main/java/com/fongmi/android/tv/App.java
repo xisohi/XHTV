@@ -113,6 +113,10 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // 初始化配置模块（内置源）
+        VodConfig.get().init();
+        LiveConfig.get().init();
+        WallConfig.get().init();
         Notify.createChannel();
         Logger.addLogAdapter(getLogAdapter());
         OkHttp.get().setProxy(Setting.getProxy());

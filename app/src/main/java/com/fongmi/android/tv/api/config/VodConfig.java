@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.api.config;
 
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
@@ -68,6 +69,8 @@ public class VodConfig {
     }
 
     public static void load(Config config, Callback callback) {
+        // 实际加载时使用真实 URL，而非占位符
+        String url = config.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_URL : config.getUrl();
         get().clear().config(config).load(callback);
     }
 
@@ -76,6 +79,8 @@ public class VodConfig {
         this.home = null;
         this.parse = null;
         this.config = Config.vod();
+        // 如果当前配置为空，则强制加载内置源
+        if (config.isEmpty()) config = Config.find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 0);
         this.ads = new ArrayList<>();
         this.doh = new ArrayList<>();
         this.rules = new ArrayList<>();
@@ -113,8 +118,11 @@ public class VodConfig {
     private void loadConfig(Callback callback) {
         try {
             OkHttp.cancel("vod");
+            String configUrl = config.getUrl();
+            Log.d("VodConfig", "正在加载配置，URL: " + configUrl); // 日志输出
             checkJson(Json.parse(Decoder.getJson(UrlUtil.convert(config.getUrl()), "vod")).getAsJsonObject(), callback);
         } catch (Throwable e) {
+            Log.e("VodConfig", "配置加载异常", e); // 异常日志
             if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
             else loadCache(callback, e);
             e.printStackTrace();
