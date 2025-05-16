@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.api.config.Constants;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
@@ -21,6 +22,7 @@ import com.fongmi.android.tv.impl.ConfigCallback;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.FileChooser;
+import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.QRCode;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -78,26 +80,11 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void initView() {
-        String address = Server.get().getAddress();
-        //  binding.text.setText(url = getUrl());
-        // 这里判断有名字就不会写到设置框里，例如名字是：源已内置
-        if (TextUtils.isEmpty(getName())) {
-            binding.text.setText(url = getUrl());
-        }
+        binding.text.setText(url = getUrl());
+        binding.text.setSelection(TextUtils.isEmpty(url) ? 0 : url.length());
+        binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
         binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
         binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("，", "\n"));
-    }
-    private String getName() {
-        switch (type) {
-            case 0:
-                return VodConfig.get().getConfig().getName();
-            case 1:
-                return LiveConfig.get().getConfig().getName();
-            case 2:
-                return WallConfig.get().getConfig().getName();
-            default:
-                return "";
-        }
     }
 
     private void initEvent() {
@@ -153,15 +140,19 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private void onPositive(View view) {
+        String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
-        if (edit) Config.find(url, type).url(text).update();
-        //  if (text.isEmpty()) Config.delete(url, type);
-        if (text.isEmpty()) {
-            url = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
-            Config.find(url, 1).name("公众号：星辉影视").update();
-            //Config.delete(ori, type);
+        // 禁止修改内置源的真实地址
+        if (TextUtils.equals(url, Constants.BUILTIN_URL) && !text.equals(Constants.BUILTIN_PLACEHOLDER)) {
+            Notify.show("此地址为内置配置，请使用其他URL");
+            return;
         }
-        callback.setConfig(Config.find(text, type));
+        // 恢复占位符为真实地址后再保存
+        if (TextUtils.equals(text, Constants.BUILTIN_PLACEHOLDER)) text = Constants.BUILTIN_URL;
+        if (edit) Config.find(url, type).url(text).update();
+        if (text.isEmpty()) Config.delete(url, type);
+        if (name.isEmpty()) callback.setConfig(Config.find(text, type));
+        else callback.setConfig(Config.find(text, name, type));
         dialog.dismiss();
     }
 

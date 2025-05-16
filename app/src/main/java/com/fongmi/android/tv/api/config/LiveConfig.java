@@ -49,7 +49,8 @@ public class LiveConfig {
     }
 
     public static String getUrl() {
-        return get().getConfig().getUrl();
+        String url = get().getConfig().getUrl();
+        return TextUtils.equals(url, Constants.BUILTIN_URL) ? Constants.BUILTIN_PLACEHOLDER : url;
     }
 
     public static String getDesc() {

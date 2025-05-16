@@ -51,7 +51,8 @@ public class VodConfig {
     }
 
     public static String getUrl() {
-        return get().getConfig().getUrl();
+        String url = get().getConfig().getUrl();
+        return TextUtils.equals(url, Constants.BUILTIN_URL) ? Constants.BUILTIN_PLACEHOLDER : url;
     }
 
     public static String getDesc() {
@@ -81,7 +82,7 @@ public class VodConfig {
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
-        this.loadLive = true;
+        this.loadLive = false;
         return this;
     }
 
@@ -110,53 +111,13 @@ public class VodConfig {
     }
 
     private void loadConfig(Callback callback) {
-        String url = config.getUrl();
-        if (!TextUtils.isEmpty(url)) {
-            // 如果有配置的 URL，尝试从该 URL 加载配置
-            loadConfigFromUrl(url, callback);
-        } else {
-            // 如果没有配置的 URL，使用默认 URL 加载配置
-            loadConfigFromDefaultUrl(callback);
-        }
-    }
-
-    private void loadConfigFromUrl(String url, Callback callback) {
         try {
             OkHttp.cancel("vod");
-            String tag = "vod"; // 示例 tag 参数
-            String json = Decoder.getJson(url, tag); // 传递两个参数
-            if (!TextUtils.isEmpty(json)) {
-                JsonObject jsonObject = Json.parse(json).getAsJsonObject();
-                checkJson(jsonObject, callback);
-            } else {
-                // 如果获取的 JSON 字符串为空，使用默认 URL 重新加载
-                loadConfigFromDefaultUrl(callback);
-            }
-        } catch (Exception e) {
-            // 网络请求异常处理
+            checkJson(Json.parse(Decoder.getJson(UrlUtil.convert(config.getUrl()), "vod")).getAsJsonObject(), callback);
+        } catch (Throwable e) {
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            else loadCache(callback, e);
             e.printStackTrace();
-            // 如果请求异常，使用默认 URL 重新加载
-            loadConfigFromDefaultUrl(callback);
-        }
-    }
-
-    private void loadConfigFromDefaultUrl(Callback callback) {
-        String defaultUrl = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
-        try {
-            String tag = "vod"; // 示例 tag 参数
-            String json = Decoder.getJson(defaultUrl, tag); // 传递两个参数
-            if (!TextUtils.isEmpty(json)) {
-                JsonObject jsonObject = Json.parse(json).getAsJsonObject();
-                checkJson(jsonObject, callback);
-                Config.find(defaultUrl, 0).name("公众号🍎：星辉工作室").update();
-            } else {
-                // 如果默认 URL 加载的 JSON 字符串为空，调用回调的错误方法
-                App.post(() -> callback.error("微信公众号🍎《星辉工作室》"));
-            }
-        } catch (Exception e) {
-            // 默认 URL 请求异常处理
-            e.printStackTrace();
-            App.post(() -> callback.error("加载配置失败：" + e.getMessage()));
         }
     }
 
