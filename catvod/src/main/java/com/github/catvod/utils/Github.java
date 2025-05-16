@@ -14,7 +14,7 @@ public class Github {
     }
 
     public static String getJson(boolean dev, String name) {
-        return getUrl("https://xhys.lcjly.cn/update" , "release.json");
+        return getUrl("https://xhys.lcjly.cn/update" , "ghys.json");
     }
 
     public static String getSo(String url) {
