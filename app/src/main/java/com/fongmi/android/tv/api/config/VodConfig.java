@@ -87,7 +87,7 @@ public class VodConfig {
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
-        this.loadLive = false;
+        this.loadLive = true;
         return this;
     }
 
