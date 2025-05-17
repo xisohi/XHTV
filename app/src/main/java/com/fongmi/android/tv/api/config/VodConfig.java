@@ -166,6 +166,7 @@ public class VodConfig {
             App.post(callback::success);
         } catch (Throwable e) {
             e.printStackTrace();
+            Log.e("VodConfig", "配置解析失败", e); // 添加详细日志
             App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
         }
     }
