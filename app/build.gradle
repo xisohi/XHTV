@@ -9,7 +9,7 @@ android {
     flavorDimensions = ["mode", "api", "abi"]
 
     defaultConfig {
-        applicationId "com.fongmi.android.ghys"
+        applicationId "com.fongmi.android.tv.ghys"
         minSdk 21
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
