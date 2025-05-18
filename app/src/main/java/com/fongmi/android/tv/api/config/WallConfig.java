@@ -73,7 +73,7 @@ public class WallConfig {
     private void loadConfig(Callback callback) {
         try {
             String loadUrl = config.getUrl();
-            // 加载时替换占位符为真实地址
+            // 加载时替换占位符为真实地址（但显示时仍用占位符）
             if (Constants.BUILTIN_PLACEHOLDER.equals(loadUrl)) {
                 loadUrl = Constants.BUILTIN_URL;
             }

@@ -111,7 +111,8 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
                 return LiveConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : LiveConfig.getUrl();
             case 2:
                 String url = WallConfig.getUrl();
-                return Constants.BUILTIN_PLACEHOLDER.equals(url) ? Constants.BUILTIN_NAME : url;
+                // 修复：检查是否真实地址来源于内置源，返回占位符名称
+                return (url.equals(Constants.BUILTIN_PLACEHOLDER) || url.equals(Constants.BUILTIN_URL)) ? Constants.BUILTIN_NAME : url;
             default:
                 return "";
         }
@@ -142,6 +143,10 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     private void onPositive(View view) {
         String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
+        // 新增逻辑：如果用户输入的是内置源名称，替换为占位符 URL
+        if (text.equals(Constants.BUILTIN_NAME)) {
+            text = Constants.BUILTIN_PLACEHOLDER;
+        }
         if (edit) Config.find(url, type).url(text).update();
         if (text.isEmpty()) Config.delete(url, type);
         if (name.isEmpty()) callback.setConfig(Config.find(text, type));

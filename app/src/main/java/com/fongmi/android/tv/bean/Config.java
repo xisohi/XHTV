@@ -225,12 +225,15 @@ public class Config {
     }
 
     public static Config find(String url, String name, int type) {
-        // 新增内置源判断逻辑
+        // 新增：如果名称是内置源名称，强制使用占位符 URL
+        if (name.equals(Constants.BUILTIN_NAME)) {
+            url = Constants.BUILTIN_PLACEHOLDER;
+        }
         if (url.equals(Constants.BUILTIN_PLACEHOLDER)) {
             return new Config()
                     .type(type)
-                    .name(Constants.BUILTIN_NAME) // 强制使用内置名称
-                    .url(Constants.BUILTIN_PLACEHOLDER) // 保持占位符URL
+                    .name(Constants.BUILTIN_NAME)
+                    .url(Constants.BUILTIN_PLACEHOLDER)
                     .update();
         }
         Config item = AppDatabase.get().getConfigDao().find(url, type);
