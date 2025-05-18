@@ -108,7 +108,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
             case 0:
                 return VodConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : VodConfig.getUrl();
             case 1:
-                return LiveConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : LiveConfig.getUrl();
+                return LiveConfig.getUrl();
             case 2:
                 return WallConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : WallConfig.getUrl();
             default:
