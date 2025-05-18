@@ -269,6 +269,14 @@ public class Config {
                     .url(Constants.BUILTIN_PLACEHOLDER)
                     .update();
         }
+        // 初始化壁纸内置源（按需添加）
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 2) == null) {
+            new Config()
+                    .type(2)
+                    .name(Constants.BUILTIN_NAME)
+                    .url(Constants.BUILTIN_PLACEHOLDER)
+                    .update();
+        }
     }
 
     public Config insert() {
