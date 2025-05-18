@@ -110,7 +110,7 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
             case 1:
                 return LiveConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : LiveConfig.getUrl();
             case 2:
-                return WallConfig.getUrl();
+                return WallConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : WallConfig.getUrl();
             default:
                 return "";
         }
