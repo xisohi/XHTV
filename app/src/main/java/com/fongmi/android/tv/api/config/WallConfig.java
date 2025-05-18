@@ -35,8 +35,7 @@ public class WallConfig {
     }
 
     public static String getUrl() {
-        String url = get().getConfig().getUrl();
-        return TextUtils.equals(url, Constants.BUILTIN_URL) ? Constants.BUILTIN_PLACEHOLDER : url;
+        return get().getConfig().getUrl();
     }
 
     public static String getDesc() {

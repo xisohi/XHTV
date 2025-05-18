@@ -1,7 +1,6 @@
 package com.fongmi.android.tv.api.config;
 
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
@@ -52,8 +51,7 @@ public class VodConfig {
     }
 
     public static String getUrl() {
-        String url = get().getConfig().getUrl();
-        return TextUtils.equals(url, Constants.BUILTIN_URL) ? Constants.BUILTIN_PLACEHOLDER : url;
+        return get().getConfig().getUrl();
     }
 
     public static String getDesc() {
@@ -69,8 +67,6 @@ public class VodConfig {
     }
 
     public static void load(Config config, Callback callback) {
-        // 实际加载时使用真实 URL，而非占位符
-        String url = config.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_URL : config.getUrl();
         get().clear().config(config).load(callback);
     }
 
@@ -79,15 +75,13 @@ public class VodConfig {
         this.home = null;
         this.parse = null;
         this.config = Config.vod();
-        // 如果当前配置为空，则强制加载内置源
-        if (config.isEmpty()) config = Config.find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 0);
         this.ads = new ArrayList<>();
         this.doh = new ArrayList<>();
         this.rules = new ArrayList<>();
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
-        this.loadLive = true;
+        this.loadLive = false;
         return this;
     }
 
@@ -117,14 +111,33 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
+            // 1. 处理内置源占位符
+            String loadUrl = config.getUrl();
+            if (Constants.BUILTIN_PLACEHOLDER.equals(loadUrl)) {
+                loadUrl = Constants.BUILTIN_URL; // 替换占位符为真实URL
+            }
+
+            // 2. 取消旧请求并加载新配置
             OkHttp.cancel("vod");
-            String configUrl = config.getUrl();
-            Log.d("VodConfig", "正在加载配置，URL: " + configUrl); // 日志输出
-            checkJson(Json.parse(Decoder.getJson(UrlUtil.convert(config.getUrl()), "vod")).getAsJsonObject(), callback);
+            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl), "vod")).getAsJsonObject();
+            checkJson(json, callback);
+
         } catch (Throwable e) {
-            Log.e("VodConfig", "配置加载异常", e); // 异常日志
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else loadCache(callback, e);
+            // 3. 异常处理逻辑
+            if (config.getUrl().equals(Constants.BUILTIN_PLACEHOLDER)) {
+                // 内置源加载失败，直接报错不重试
+                App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
+                return;
+            }
+
+            if (TextUtils.isEmpty(config.getUrl())) {
+                // 用户未配置源，回退到内置源
+                config = Config.find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
+                loadConfig(callback); // 递归加载内置源
+            } else {
+                // 用户配置源加载失败，尝试读取缓存
+                loadCache(callback, e);
+            }
             e.printStackTrace();
         }
     }
@@ -166,7 +179,6 @@ public class VodConfig {
             App.post(callback::success);
         } catch (Throwable e) {
             e.printStackTrace();
-            Log.e("VodConfig", "配置解析失败", e); // 添加详细日志
             App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
         }
     }

@@ -12,9 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.os.HandlerCompat;
 
-import com.fongmi.android.tv.api.config.LiveConfig;
-import com.fongmi.android.tv.api.config.VodConfig;
-import com.fongmi.android.tv.api.config.WallConfig;
+import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.event.EventIndex;
 import com.fongmi.android.tv.ui.activity.CrashActivity;
 import com.fongmi.android.tv.utils.Notify;
@@ -116,10 +114,7 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        // 初始化配置模块（内置源）
-        VodConfig.get().init();
-        LiveConfig.get().init();
-        WallConfig.get().init();
+        Config.initBuiltin(); // 初始化内置源
         Notify.createChannel();
         Logger.addLogAdapter(getLogAdapter());
         OkHttp.get().setProxy(Setting.getProxy());
