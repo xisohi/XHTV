@@ -117,7 +117,6 @@ public class App extends Application {
         Config.initBuiltin(); // 初始化内置源
         Notify.createChannel();
         Logger.addLogAdapter(getLogAdapter());
-        OkHttp.get().setProxy(Setting.getProxy());
         OkHttp.get().setDoh(Doh.objectFrom(Setting.getDoh()));
         EventBus.builder().addIndex(new EventIndex()).installDefaultEventBus();
         CaocConfig.Builder.create().backgroundMode(CaocConfig.BACKGROUND_MODE_SILENT).errorActivity(CrashActivity.class).apply();
