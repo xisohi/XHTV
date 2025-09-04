@@ -32,15 +32,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LiveConfig {
 
+    private Live home;
+    private Config config;
     private List<Live> lives;
     private List<Rule> rules;
     private List<String> ads;
-    private Config config;
+    private ExecutorService executor;
+
     private boolean sync;
-    private Live home;
 
     private static class Loader {
         static volatile LiveConfig INSTANCE = new LiveConfig();
@@ -110,7 +114,9 @@ public class LiveConfig {
     }
 
     public void load(Callback callback) {
-        App.execute(() -> loadConfig(callback));
+        if (executor != null) executor.shutdownNow();
+        executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> loadConfig(callback));
     }
 
     private void loadConfig(Callback callback) {
