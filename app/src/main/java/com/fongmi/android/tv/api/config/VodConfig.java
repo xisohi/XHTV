@@ -142,7 +142,7 @@ public class VodConfig {
 
             // 4. 取消旧请求并加载新配置
             OkHttp.cancel("vod");
-            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl), "vod")).getAsJsonObject();
+            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl))).getAsJsonObject();
             checkJson(json, callback);
 
         } catch (Throwable e) {
