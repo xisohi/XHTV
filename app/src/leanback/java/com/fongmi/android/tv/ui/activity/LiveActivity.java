@@ -19,7 +19,6 @@ import androidx.media3.common.Player;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
-import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
@@ -39,6 +38,7 @@ import com.fongmi.android.tv.event.ErrorEvent;
 import com.fongmi.android.tv.event.PlayerEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
+import com.fongmi.android.tv.impl.CustomTarget;
 import com.fongmi.android.tv.impl.LiveCallback;
 import com.fongmi.android.tv.impl.PassCallback;
 import com.fongmi.android.tv.model.LiveViewModel;
@@ -507,15 +507,18 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         this.count = 0;
     }
 
-    private void setArtwork(String url) {
-        ImgUtil.load(url, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+    private void setArtwork() {
+        ImgUtil.load(mChannel.getLogo(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
+                setMetadata();
             }
 
             @Override
-            public void onLoadCleared(@Nullable Drawable placeholder) {
+            public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                mBinding.exo.setDefaultArtwork(errorDrawable);
+                setMetadata();
             }
         });
     }
@@ -579,9 +582,9 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setChannel(Channel item) {
-        setArtwork(item.getLogo());
         App.post(mR0, 100);
         mChannel = item;
+        setArtwork();
         showInfo();
     }
 
@@ -640,7 +643,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void checkPlayImg() {
-        ActionEvent.update();
         mBinding.control.action.setText(mPlayers.isPlaying() ? R.string.pause : R.string.play);
     }
 
@@ -725,12 +727,14 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
             case PlayerEvent.PREPARE:
                 setDecode();
                 break;
+            case PlayerEvent.PLAYING:
+                checkPlayImg();
+                break;
             case Player.STATE_BUFFERING:
                 showProgress();
                 break;
             case Player.STATE_READY:
                 hideProgress();
-                checkPlayImg();
                 mPlayers.reset();
                 break;
             case Player.STATE_ENDED:
@@ -830,12 +834,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void onPaused() {
         mPlayers.pause();
-        checkPlayImg();
     }
 
     private void onPlay() {
         mPlayers.play();
-        checkPlayImg();
     }
 
     public boolean isRedirect() {
@@ -961,6 +963,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     @Override
     protected void onStart() {
         super.onStart();
+        mBinding.exo.setPlayer(mPlayers.get());
         mClock.stop().start();
         onPlay();
     }
@@ -983,10 +986,11 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         super.onStop();
         if (Setting.isBackgroundOff()) onPaused();
         if (Setting.isBackgroundOff()) mClock.stop();
+        mBinding.exo.setPlayer(null);
     }
 
     @Override
-    public void onBackPressed() {
+    protected void onBackInvoked() {
         if (isVisible(mBinding.control.getRoot())) {
             hideControl();
         } else if (isVisible(mBinding.widget.bottom)) {
@@ -994,7 +998,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         } else if (isVisible(mBinding.recycler)) {
             hideUI();
         } else {
-            super.onBackPressed();
+            super.onBackInvoked();
         }
     }
 
