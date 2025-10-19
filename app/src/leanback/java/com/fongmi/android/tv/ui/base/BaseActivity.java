@@ -5,6 +5,11 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import android.app.Activity;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -26,11 +31,18 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import me.jessyan.autosize.AutoSizeCompat;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
     private OnBackInvokedCallback callback;
+    /* ===== 网络壁纸常量 ===== */
+    private static final String WALL_URL = "https://xhys.lcjly.cn/image/bg.jpg";
 
     protected abstract ViewBinding getBinding();
 
@@ -43,13 +55,48 @@ public abstract class BaseActivity extends AppCompatActivity {
         setBackCallback();
         initView();
         initEvent();
+        loadNetworkWallpaper();   // 唯一新增调用
     }
+
+    /* ===== 网络壁纸逻辑 ===== */
+    private void loadNetworkWallpaper() {
+        if (!customWall()) return;
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        pool.execute(() -> {
+            Bitmap bmp = null;
+            if (isNetOk()) {
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(WALL_URL).openConnection();
+                    c.setConnectTimeout(3000);
+                    c.setReadTimeout(3000);
+                    if (c.getResponseCode() == 200) {
+                        bmp = BitmapFactory.decodeStream(c.getInputStream());
+                    }
+                    c.disconnect();
+                } catch (Exception ignored) {}
+            }
+            final Bitmap result = bmp;
+            runOnUiThread(() -> applyWallBitmap(result));
+        });
+    }
+
+    private boolean isNetOk() {
+        NetworkInfo ni = ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+        return ni != null && ni.isConnected();
+    }
+
+    private void applyWallBitmap(Bitmap bmp) {
+        ViewGroup root = findViewById(android.R.id.content);
+        CustomWallView wallView = new CustomWallView(this, null);
+        if (bmp != null) wallView.setBackground(new BitmapDrawable(getResources(), bmp));
+        root.addView(wallView, 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+    }
+    /* ===== 网络壁纸逻辑结束 ===== */
 
     @Override
     public void setContentView(View view) {
         super.setContentView(view);
-        if (!customWall()) return;
-        ((ViewGroup) findViewById(android.R.id.content)).addView(new CustomWallView(this, null), 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        // 不再这里 addView，避免重复
     }
 
     protected Activity getActivity() {
@@ -129,6 +176,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         EventBus.getDefault().unregister(this);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
     }
 }
