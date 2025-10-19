@@ -25,6 +25,7 @@ import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
+import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.ui.custom.CustomWallView;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Util;
@@ -49,6 +50,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     private static final String WALL_URL = "https://xhys.lcjly.cn/image/bg.jpg";
 
     private OnBackInvokedCallback callback;
+    private CustomWallView wallView;
 
     protected abstract ViewBinding getBinding();
 
@@ -59,78 +61,137 @@ public abstract class BaseActivity extends AppCompatActivity {
         EventBus.getDefault().register(this);
         Util.hideSystemUI(this);
         setBackCallback();
+        // 先添加默认背景视图
+        addWallView(null);
         initView();
         initEvent();
         loadNetworkWallpaper();   // 唯一入口
     }
 
-    /* ===== 网络壁纸逻辑（带日志） ===== */
+    /* ===== 网络壁纸逻辑（增强版） ===== */
     private void loadNetworkWallpaper() {
+        Log.d(TAG, "=== 开始加载网络壁纸 ===");
+        Log.d(TAG, "customWall() = " + customWall());
+
         if (!customWall()) {
             Log.w(TAG, "customWall() returned false → skip network wallpaper");
             return;
         }
+
         Log.d(TAG, "loadNetworkWallpaper() start, url=" + WALL_URL);
         ExecutorService pool = Executors.newSingleThreadExecutor();
         pool.execute(() -> {
             boolean netOk = isNetOk();
             Log.d(TAG, "network available=" + netOk);
-            Bitmap bmp = null;
-            if (netOk) {
-                try {
-                    HttpURLConnection c = (HttpURLConnection) new URL(WALL_URL).openConnection();
-                    c.setConnectTimeout(3000);
-                    c.setReadTimeout(3000);
-                    int code = c.getResponseCode();
-                    Log.d(TAG, "http responseCode=" + code);
-                    if (code == 200) {
-                        bmp = BitmapFactory.decodeStream(c.getInputStream());
-                        Log.i(TAG, "network picture decoded, bitmap=" + bmp);
-                    } else {
-                        Log.w(TAG, "http not 200, fallback to default");
-                    }
-                    c.disconnect();
-                } catch (Exception e) {
-                    Log.e(TAG, "network load error", e);
-                }
-            } else {
-                Log.w(TAG, "no network → will use default wallpaper");
+
+            if (!netOk) {
+                Log.w(TAG, "无网络连接，使用默认壁纸");
+                runOnUiThread(() -> applyWallBitmap(null));
+                return;
             }
+
+            Bitmap bmp = null;
+            try {
+                Log.d(TAG, "开始HTTP请求...");
+                HttpURLConnection connection = (HttpURLConnection) new URL(WALL_URL).openConnection();
+                connection.setConnectTimeout(10000); // 延长超时时间
+                connection.setReadTimeout(10000);
+                connection.setRequestMethod("GET");
+                connection.setDoInput(true);
+
+                int code = connection.getResponseCode();
+                Log.d(TAG, "HTTP响应码: " + code);
+
+                if (code == HttpURLConnection.HTTP_OK) {
+                    Log.d(TAG, "开始解码图片流...");
+                    bmp = BitmapFactory.decodeStream(connection.getInputStream());
+                    if (bmp != null) {
+                        Log.i(TAG, "网络图片解码成功, 尺寸: " + bmp.getWidth() + "x" + bmp.getHeight());
+                        // 保存到缓存
+                        saveBitmapToCache(bmp);
+                    } else {
+                        Log.e(TAG, "图片解码失败 - BitmapFactory.decodeStream返回null");
+                    }
+                } else {
+                    Log.w(TAG, "HTTP错误: " + code + ", 使用默认壁纸");
+                }
+                connection.disconnect();
+            } catch (Exception e) {
+                Log.e(TAG, "网络加载错误: " + e.getMessage(), e);
+            }
+
             final Bitmap result = bmp;
-            if (result != null) saveBitmapToCache(result);
             runOnUiThread(() -> {
-                Log.d(TAG, "applyWallBitmap on UI thread, bitmap=" + result);
+                Log.d(TAG, "在UI线程应用壁纸, bitmap=" + (result != null ? "有效" : "null"));
                 applyWallBitmap(result);
             });
         });
+        pool.shutdown();
     }
 
     private void saveBitmapToCache(Bitmap bitmap) {
+        if (bitmap == null) {
+            Log.e(TAG, "保存缓存失败: bitmap为null");
+            return;
+        }
+
         File cacheFile = FileUtil.getWallCache();
         try (FileOutputStream out = new FileOutputStream(cacheFile)) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-            Log.i(TAG, "network wallpaper saved to cache: " + cacheFile.getAbsolutePath());
+            Log.i(TAG, "网络壁纸已保存到缓存: " + cacheFile.getAbsolutePath());
+            Log.i(TAG, "缓存文件大小: " + cacheFile.length() + " bytes");
+
+            // 修复：使用正确的静态方法发送事件
+            RefreshEvent.wall();
+            Log.d(TAG, "发送壁纸刷新事件");
+
         } catch (IOException e) {
-            Log.e(TAG, "failed to save wallpaper cache", e);
+            Log.e(TAG, "保存壁纸缓存失败", e);
         }
     }
 
     private boolean isNetOk() {
-        NetworkInfo ni = ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
-        return ni != null && ni.isConnected();
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            NetworkInfo ni = cm.getActiveNetworkInfo();
+            return ni != null && ni.isConnected();
+        } catch (Exception e) {
+            Log.e(TAG, "检查网络状态失败", e);
+            return false;
+        }
+    }
+
+    private void addWallView(Bitmap bmp) {
+        ViewGroup root = findViewById(android.R.id.content);
+
+        // 移除已存在的CustomWallView
+        for (int i = 0; i < root.getChildCount(); i++) {
+            if (root.getChildAt(i) instanceof CustomWallView) {
+                root.removeViewAt(i);
+                break;
+            }
+        }
+
+        wallView = new CustomWallView(this, null);
+        if (bmp != null) {
+            wallView.setBackground(new BitmapDrawable(getResources(), bmp));
+            Log.i(TAG, "设置网络壁纸作为背景");
+        } else {
+            Log.w(TAG, "使用CustomWallView内置默认壁纸");
+        }
+
+        root.addView(wallView, 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        Log.d(TAG, "CustomWallView已添加到根布局");
     }
 
     private void applyWallBitmap(Bitmap bmp) {
-        ViewGroup root = findViewById(android.R.id.content);
-        CustomWallView wallView = new CustomWallView(this, null);
         if (bmp != null) {
-            wallView.setBackground(new BitmapDrawable(getResources(), bmp));
-            Log.i(TAG, "network wallpaper set as background");
+            Log.i(TAG, "应用网络壁纸");
+            addWallView(bmp);
         } else {
-            Log.w(TAG, "bitmap==null → CustomWallView will use built-in default");
+            Log.w(TAG, "网络壁纸加载失败，保持默认壁纸");
+            // 这里不需要做任何操作，因为默认壁纸已经在onCreate中设置
         }
-        root.addView(wallView, 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
-        Log.d(TAG, "CustomWallView added to root");
     }
     /* ===== 网络壁纸逻辑结束 ===== */
 
