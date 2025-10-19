@@ -36,6 +36,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -50,7 +51,8 @@ import me.jessyan.autosize.AutoSizeCompat;
 public abstract class BaseActivity extends AppCompatActivity {
 
     private static final String TAG = "WallpaperLogger";
-    private static final String WALL_URL = "https://xhys.lcjly.cn/image/bg.jpg";
+    // 测试用：使用明显不同的图片
+    private static final String WALL_URL = "https://picsum.photos/1280/720"; // 随机图片
 
     private OnBackInvokedCallback callback;
     private CustomWallView wallView;
@@ -71,9 +73,9 @@ public abstract class BaseActivity extends AppCompatActivity {
         loadNetworkWallpaper();   // 唯一入口
     }
 
-    /* ===== 网络壁纸逻辑（增强调试版） ===== */
+    /* ===== 网络壁纸逻辑（格式测试版） ===== */
     private void loadNetworkWallpaper() {
-        Log.d(TAG, "=== 开始加载网络壁纸 ===");
+        Log.d(TAG, "=== 开始加载网络壁纸（格式测试） ===");
         Log.d(TAG, "customWall() = " + customWall());
 
         if (!customWall()) {
@@ -107,13 +109,38 @@ public abstract class BaseActivity extends AppCompatActivity {
 
                 if (code == HttpURLConnection.HTTP_OK) {
                     Log.d(TAG, "开始解码图片流...");
-                    bmp = BitmapFactory.decodeStream(connection.getInputStream());
+                    // 使用增强的解码方法
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                    options.inSampleSize = 1;
+
+                    // 方法1：直接解码
+                    bmp = BitmapFactory.decodeStream(connection.getInputStream(), null, options);
+
+                    if (bmp == null) {
+                        Log.w(TAG, "方法1解码失败，尝试方法2（字节数组解码）...");
+                        // 方法2：字节数组解码
+                        connection.disconnect();
+                        connection = (HttpURLConnection) new URL(WALL_URL).openConnection();
+                        connection.setConnectTimeout(10000);
+                        connection.setReadTimeout(10000);
+                        connection.setRequestMethod("GET");
+
+                        if (connection.getResponseCode() == 200) {
+                            byte[] imageData = readStream(connection.getInputStream());
+                            if (imageData != null) {
+                                Log.d(TAG, "图片数据大小: " + imageData.length + " bytes");
+                                bmp = BitmapFactory.decodeByteArray(imageData, 0, imageData.length, options);
+                            }
+                        }
+                    }
+
                     if (bmp != null) {
-                        Log.i(TAG, "网络图片解码成功, 尺寸: " + bmp.getWidth() + "x" + bmp.getHeight());
-                        // 保存到缓存
+                        Log.i(TAG, "网络图片解码成功, 尺寸: " + bmp.getWidth() + "x" + bmp.getHeight() + ", 格式: " + bmp.getConfig());
+                        // 保存到缓存（使用WEBP格式）
                         saveBitmapToCache(bmp);
                     } else {
-                        Log.e(TAG, "图片解码失败 - BitmapFactory.decodeStream返回null");
+                        Log.e(TAG, "所有解码方法都失败");
                     }
                 } else {
                     Log.w(TAG, "HTTP错误: " + code + ", 使用默认壁纸");
@@ -132,6 +159,17 @@ public abstract class BaseActivity extends AppCompatActivity {
         pool.shutdown();
     }
 
+    // 读取字节流的方法
+    private byte[] readStream(java.io.InputStream inputStream) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+        return outputStream.toByteArray();
+    }
+
     private void saveBitmapToCache(Bitmap bitmap) {
         if (bitmap == null) {
             Log.e(TAG, "保存缓存失败: bitmap为null");
@@ -141,14 +179,13 @@ public abstract class BaseActivity extends AppCompatActivity {
         File cacheFile = FileUtil.getWallCache();
         Log.d(TAG, "=== 缓存文件调试信息 ===");
         Log.d(TAG, "缓存文件路径: " + cacheFile.getAbsolutePath());
-        Log.d(TAG, "缓存文件父目录: " + cacheFile.getParent());
-        Log.d(TAG, "父目录是否存在: " + cacheFile.getParentFile().exists());
 
         try (FileOutputStream out = new FileOutputStream(cacheFile)) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-            out.flush(); // 确保数据写入
+            // 使用 WEBP 格式保存（与内置壁纸相同）
+            bitmap.compress(Bitmap.CompressFormat.WEBP, 90, out);
+            out.flush();
 
-            Log.i(TAG, "网络壁纸已保存到缓存: " + cacheFile.getAbsolutePath());
+            Log.i(TAG, "网络壁纸已保存为WEBP格式到缓存: " + cacheFile.getAbsolutePath());
             Log.i(TAG, "缓存文件大小: " + cacheFile.length() + " bytes");
             Log.i(TAG, "缓存文件是否存在: " + cacheFile.exists());
 
@@ -182,7 +219,6 @@ public abstract class BaseActivity extends AppCompatActivity {
         ViewGroup root = findViewById(android.R.id.content);
 
         Log.d(TAG, "=== 开始添加壁纸视图 ===");
-        Log.d(TAG, "根布局类型: " + root.getClass().getSimpleName());
 
         // 移除已存在的CustomWallView
         int removedCount = 0;
@@ -202,7 +238,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         wallView.setId(View.generateViewId());
         if (bmp != null) {
             wallView.setBackground(new BitmapDrawable(getResources(), bmp));
-            Log.i(TAG, "设置网络壁纸作为背景");
+            Log.i(TAG, "设置网络壁纸作为背景 - 格式: " + bmp.getConfig());
         } else {
             Log.w(TAG, "使用CustomWallView内置默认壁纸");
         }
@@ -242,7 +278,7 @@ public abstract class BaseActivity extends AppCompatActivity {
             Log.i(TAG, "应用网络壁纸");
 
             runOnUiThread(() -> {
-                Toast.makeText(this, "网络壁纸加载成功!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "网络壁纸加载成功! 格式: " + bmp.getConfig(), Toast.LENGTH_LONG).show();
             });
 
             addWallView(bmp);
@@ -250,7 +286,7 @@ public abstract class BaseActivity extends AppCompatActivity {
             // 延迟检查壁纸显示状态和截屏
             new Handler().postDelayed(() -> {
                 checkWallpaperVisibility();
-                takeScreenshotForVerification();  // 新增截屏验证
+                takeScreenshotForVerification();
             }, 2000);
 
         } else {
@@ -266,18 +302,14 @@ public abstract class BaseActivity extends AppCompatActivity {
         Log.d(TAG, "=== 开始截屏验证 ===");
 
         try {
-            // 获取根视图
             View rootView = getWindow().getDecorView().getRootView();
             rootView.setDrawingCacheEnabled(true);
-
-            // 创建截屏
             Bitmap screenshot = Bitmap.createBitmap(rootView.getDrawingCache());
             rootView.setDrawingCacheEnabled(false);
 
             if (screenshot != null) {
-                // 保存截屏到文件
                 File screenshotDir = getExternalFilesDir(null);
-                File screenshotFile = new File(screenshotDir, "wallpaper_verification_" + System.currentTimeMillis() + ".jpg");
+                File screenshotFile = new File(screenshotDir, "wallpaper_test_" + System.currentTimeMillis() + ".jpg");
 
                 try (FileOutputStream out = new FileOutputStream(screenshotFile)) {
                     screenshot.compress(Bitmap.CompressFormat.JPEG, 80, out);
@@ -285,12 +317,9 @@ public abstract class BaseActivity extends AppCompatActivity {
 
                     Log.i(TAG, "✅ 截屏验证成功！");
                     Log.i(TAG, "截屏文件路径: " + screenshotFile.getAbsolutePath());
-                    Log.i(TAG, "截屏文件大小: " + screenshotFile.length() + " bytes");
-                    Log.i(TAG, "截屏尺寸: " + screenshot.getWidth() + "x" + screenshot.getHeight());
 
-                    // 显示成功Toast
                     runOnUiThread(() -> {
-                        Toast.makeText(this, "📸 截屏已保存！路径: " + screenshotFile.getName(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "📸 截屏已保存!", Toast.LENGTH_LONG).show();
                     });
 
                 } catch (IOException e) {
@@ -324,7 +353,6 @@ public abstract class BaseActivity extends AppCompatActivity {
             Log.d(TAG, "可见性: " + (foundWallView.getVisibility() == View.VISIBLE ? "VISIBLE" : "不可见"));
             Log.d(TAG, "宽度: " + foundWallView.getWidth());
             Log.d(TAG, "高度: " + foundWallView.getHeight());
-            Log.d(TAG, "Alpha: " + foundWallView.getAlpha());
             Log.d(TAG, "背景: " + (foundWallView.getBackground() != null ? "已设置" : "未设置"));
         } else {
             Log.e(TAG, "=== 壁纸视图状态检查 ===");
@@ -333,6 +361,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
     /* ===== 网络壁纸逻辑结束 ===== */
 
+    // 其他方法保持不变...
     @Override
     public void setContentView(View view) {
         super.setContentView(view);
