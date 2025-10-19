@@ -247,9 +247,10 @@ public abstract class BaseActivity extends AppCompatActivity {
 
             addWallView(bmp);
 
-            // 延迟检查壁纸显示状态
+            // 延迟检查壁纸显示状态和截屏
             new Handler().postDelayed(() -> {
                 checkWallpaperVisibility();
+                takeScreenshotForVerification();  // 新增截屏验证
             }, 2000);
 
         } else {
@@ -257,6 +258,50 @@ public abstract class BaseActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 Toast.makeText(this, "使用默认壁纸", Toast.LENGTH_SHORT).show();
             });
+        }
+    }
+
+    // 截屏验证方法
+    private void takeScreenshotForVerification() {
+        Log.d(TAG, "=== 开始截屏验证 ===");
+
+        try {
+            // 获取根视图
+            View rootView = getWindow().getDecorView().getRootView();
+            rootView.setDrawingCacheEnabled(true);
+
+            // 创建截屏
+            Bitmap screenshot = Bitmap.createBitmap(rootView.getDrawingCache());
+            rootView.setDrawingCacheEnabled(false);
+
+            if (screenshot != null) {
+                // 保存截屏到文件
+                File screenshotDir = getExternalFilesDir(null);
+                File screenshotFile = new File(screenshotDir, "wallpaper_verification_" + System.currentTimeMillis() + ".jpg");
+
+                try (FileOutputStream out = new FileOutputStream(screenshotFile)) {
+                    screenshot.compress(Bitmap.CompressFormat.JPEG, 80, out);
+                    out.flush();
+
+                    Log.i(TAG, "✅ 截屏验证成功！");
+                    Log.i(TAG, "截屏文件路径: " + screenshotFile.getAbsolutePath());
+                    Log.i(TAG, "截屏文件大小: " + screenshotFile.length() + " bytes");
+                    Log.i(TAG, "截屏尺寸: " + screenshot.getWidth() + "x" + screenshot.getHeight());
+
+                    // 显示成功Toast
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "📸 截屏已保存！路径: " + screenshotFile.getName(), Toast.LENGTH_LONG).show();
+                    });
+
+                } catch (IOException e) {
+                    Log.e(TAG, "保存截屏文件失败", e);
+                }
+            } else {
+                Log.e(TAG, "截屏失败 - Bitmap为null");
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "截屏过程出错", e);
         }
     }
 
