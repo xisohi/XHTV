@@ -12,7 +12,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;               // ← 新增
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.window.OnBackInvokedCallback;
@@ -26,12 +26,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.ui.custom.CustomWallView;
+import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Util;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
@@ -41,8 +45,8 @@ import me.jessyan.autosize.AutoSizeCompat;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
-    private static final String TAG = "WallpaperLogger";   // ← 新增
-    private static final String WALL_URL = "https://xhys.lcjly.cn/image/bg.jpg"; // ← 新增
+    private static final String TAG = "WallpaperLogger";
+    private static final String WALL_URL = "https://xhys.lcjly.cn/image/bg.jpg";
 
     private OnBackInvokedCallback callback;
 
@@ -57,7 +61,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         setBackCallback();
         initView();
         initEvent();
-        loadNetworkWallpaper();   // ← 新增
+        loadNetworkWallpaper();   // 唯一入口
     }
 
     /* ===== 网络壁纸逻辑（带日志） ===== */
@@ -93,11 +97,22 @@ public abstract class BaseActivity extends AppCompatActivity {
                 Log.w(TAG, "no network → will use default wallpaper");
             }
             final Bitmap result = bmp;
+            if (result != null) saveBitmapToCache(result);
             runOnUiThread(() -> {
                 Log.d(TAG, "applyWallBitmap on UI thread, bitmap=" + result);
                 applyWallBitmap(result);
             });
         });
+    }
+
+    private void saveBitmapToCache(Bitmap bitmap) {
+        File cacheFile = FileUtil.getWallCache();
+        try (FileOutputStream out = new FileOutputStream(cacheFile)) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            Log.i(TAG, "network wallpaper saved to cache: " + cacheFile.getAbsolutePath());
+        } catch (IOException e) {
+            Log.e(TAG, "failed to save wallpaper cache", e);
+        }
     }
 
     private boolean isNetOk() {
@@ -122,7 +137,6 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void setContentView(View view) {
         super.setContentView(view);
-        // 不再这里 addView，避免重复
     }
 
     protected Activity getActivity() {
