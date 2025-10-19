@@ -12,9 +12,11 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
@@ -39,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,7 +71,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         loadNetworkWallpaper();   // 唯一入口
     }
 
-    /* ===== 网络壁纸逻辑（增强版） ===== */
+    /* ===== 网络壁纸逻辑（增强调试版） ===== */
     private void loadNetworkWallpaper() {
         Log.d(TAG, "=== 开始加载网络壁纸 ===");
         Log.d(TAG, "customWall() = " + customWall());
@@ -94,7 +97,7 @@ public abstract class BaseActivity extends AppCompatActivity {
             try {
                 Log.d(TAG, "开始HTTP请求...");
                 HttpURLConnection connection = (HttpURLConnection) new URL(WALL_URL).openConnection();
-                connection.setConnectTimeout(10000); // 延长超时时间
+                connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
                 connection.setRequestMethod("GET");
                 connection.setDoInput(true);
@@ -136,12 +139,26 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
 
         File cacheFile = FileUtil.getWallCache();
+        Log.d(TAG, "=== 缓存文件调试信息 ===");
+        Log.d(TAG, "缓存文件路径: " + cacheFile.getAbsolutePath());
+        Log.d(TAG, "缓存文件父目录: " + cacheFile.getParent());
+        Log.d(TAG, "父目录是否存在: " + cacheFile.getParentFile().exists());
+
         try (FileOutputStream out = new FileOutputStream(cacheFile)) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            out.flush(); // 确保数据写入
+
             Log.i(TAG, "网络壁纸已保存到缓存: " + cacheFile.getAbsolutePath());
             Log.i(TAG, "缓存文件大小: " + cacheFile.length() + " bytes");
+            Log.i(TAG, "缓存文件是否存在: " + cacheFile.exists());
 
-            // 修复：使用正确的静态方法发送事件
+            // 列出目录内容
+            File parentDir = cacheFile.getParentFile();
+            if (parentDir.exists() && parentDir.isDirectory()) {
+                String[] files = parentDir.list();
+                Log.d(TAG, "目录内容: " + (files != null ? Arrays.toString(files) : "空或无法访问"));
+            }
+
             RefreshEvent.wall();
             Log.d(TAG, "发送壁纸刷新事件");
 
@@ -164,15 +181,25 @@ public abstract class BaseActivity extends AppCompatActivity {
     private void addWallView(Bitmap bmp) {
         ViewGroup root = findViewById(android.R.id.content);
 
+        Log.d(TAG, "=== 开始添加壁纸视图 ===");
+        Log.d(TAG, "根布局类型: " + root.getClass().getSimpleName());
+
         // 移除已存在的CustomWallView
+        int removedCount = 0;
         for (int i = 0; i < root.getChildCount(); i++) {
             if (root.getChildAt(i) instanceof CustomWallView) {
                 root.removeViewAt(i);
+                removedCount++;
+                Log.d(TAG, "移除已存在的CustomWallView, 索引: " + i);
                 break;
             }
         }
+        Log.d(TAG, "共移除 " + removedCount + " 个CustomWallView");
 
         wallView = new CustomWallView(this, null);
+
+        // 设置壁纸视图属性
+        wallView.setId(View.generateViewId());
         if (bmp != null) {
             wallView.setBackground(new BitmapDrawable(getResources(), bmp));
             Log.i(TAG, "设置网络壁纸作为背景");
@@ -180,17 +207,83 @@ public abstract class BaseActivity extends AppCompatActivity {
             Log.w(TAG, "使用CustomWallView内置默认壁纸");
         }
 
+        // 添加到最底层
         root.addView(wallView, 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
-        Log.d(TAG, "CustomWallView已添加到根布局");
+
+        // 设置Z轴顺序确保在最底层
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            wallView.setZ(-1f);
+        }
+
+        Log.d(TAG, "CustomWallView已添加到根布局，索引: 0");
+
+        // 记录当前视图层次
+        logChildViews(root);
+    }
+
+    // 调试方法：打印所有子视图信息
+    private void logChildViews(ViewGroup root) {
+        Log.d(TAG, "=== 根布局子视图详细信息 ===");
+        Log.d(TAG, "子视图总数: " + root.getChildCount());
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            Log.d(TAG, "索引 " + i + ": " + child.getClass().getSimpleName() +
+                    ", ID: " + child.getId() +
+                    ", 可见性: " + (child.getVisibility() == View.VISIBLE ? "VISIBLE" :
+                    child.getVisibility() == View.INVISIBLE ? "INVISIBLE" : "GONE") +
+                    ", 宽度: " + child.getWidth() +
+                    ", 高度: " + child.getHeight());
+        }
+        Log.d(TAG, "=== 子视图信息结束 ===");
     }
 
     private void applyWallBitmap(Bitmap bmp) {
         if (bmp != null) {
             Log.i(TAG, "应用网络壁纸");
+
+            runOnUiThread(() -> {
+                Toast.makeText(this, "网络壁纸加载成功!", Toast.LENGTH_LONG).show();
+            });
+
             addWallView(bmp);
+
+            // 延迟检查壁纸显示状态
+            new Handler().postDelayed(() -> {
+                checkWallpaperVisibility();
+            }, 2000);
+
         } else {
             Log.w(TAG, "网络壁纸加载失败，保持默认壁纸");
-            // 这里不需要做任何操作，因为默认壁纸已经在onCreate中设置
+            runOnUiThread(() -> {
+                Toast.makeText(this, "使用默认壁纸", Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    // 检查壁纸可见性
+    private void checkWallpaperVisibility() {
+        ViewGroup root = findViewById(android.R.id.content);
+        CustomWallView foundWallView = null;
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child instanceof CustomWallView) {
+                foundWallView = (CustomWallView) child;
+                break;
+            }
+        }
+
+        if (foundWallView != null) {
+            Log.d(TAG, "=== 壁纸视图状态检查 ===");
+            Log.d(TAG, "CustomWallView 找到: 是");
+            Log.d(TAG, "可见性: " + (foundWallView.getVisibility() == View.VISIBLE ? "VISIBLE" : "不可见"));
+            Log.d(TAG, "宽度: " + foundWallView.getWidth());
+            Log.d(TAG, "高度: " + foundWallView.getHeight());
+            Log.d(TAG, "Alpha: " + foundWallView.getAlpha());
+            Log.d(TAG, "背景: " + (foundWallView.getBackground() != null ? "已设置" : "未设置"));
+        } else {
+            Log.e(TAG, "=== 壁纸视图状态检查 ===");
+            Log.e(TAG, "CustomWallView 找到: 否 - 壁纸视图未找到！");
         }
     }
     /* ===== 网络壁纸逻辑结束 ===== */
