@@ -2,6 +2,7 @@ package com.fongmi.android.tv;
 
 import android.app.Activity;
 import android.content.DialogInterface;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -25,19 +26,17 @@ import java.util.Locale;
 public class Updater implements Download.Callback {
 
     private DialogUpdateBinding binding;
-    private final Download download;
     private AlertDialog dialog;
+    private boolean dev;
+    private String apkUrl; // 用于存储 APK 的下载地址
+    private Download download; // 延迟初始化
 
     private File getFile() {
         return Path.cache("update.apk");
     }
 
     private String getJson() {
-        return Github.getJson(BuildConfig.FLAVOR_mode);
-    }
-
-    private String getApk() {
-        return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
+        return Github.getJson(dev, BuildConfig.FLAVOR_mode);
     }
 
     public static Updater create() {
@@ -45,12 +44,22 @@ public class Updater implements Download.Callback {
     }
 
     public Updater() {
-        this.download = Download.create(getApk(), getFile(), this);
+        // 不在构造函数中初始化 Download 对象
     }
 
     public Updater force() {
         Notify.show(R.string.update_check);
         Setting.putUpdate(true);
+        return this;
+    }
+
+    public Updater release() {
+        this.dev = false;
+        return this;
+    }
+
+    public Updater dev() {
+        this.dev = true;
         return this;
     }
 
@@ -60,8 +69,11 @@ public class Updater implements Download.Callback {
     }
 
     public void start(Activity activity) {
-        if (!Setting.getUpdate()) return;
         App.execute(() -> doInBackground(activity));
+    }
+
+    private boolean need(int code, String name) {
+        return Setting.getUpdate() && (dev ? !name.equals(BuildConfig.VERSION_NAME) && code >= BuildConfig.VERSION_CODE : code > BuildConfig.VERSION_CODE);
     }
 
     private void doInBackground(Activity activity) {
@@ -70,7 +82,17 @@ public class Updater implements Download.Callback {
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            if (code > BuildConfig.VERSION_CODE) App.post(() -> show(activity, name, desc));
+            String apkUrlTemplate = object.optString("apkurl"); // 获取 APK URL 模板
+
+            // 替换 {name} 占位符为实际的 APK 文件名
+            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi + ".apk";
+            apkUrl = apkUrlTemplate.replace("{name}", apkName);
+
+            Log.d("Updater", "APK 下载地址: " + apkUrl); // 打印 APK 下载地址
+
+            if (need(code, name)) {
+                App.post(() -> show(activity, name, desc));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -78,24 +100,35 @@ public class Updater implements Download.Callback {
 
     private void show(Activity activity, String version, String desc) {
         binding = DialogUpdateBinding.inflate(LayoutInflater.from(activity));
-        check().create(activity, ResUtil.getString(R.string.update_version, version)).show();
+        dialog = create(activity, ResUtil.getString(R.string.update_version, version));
+        dialog.show();
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(this::confirm);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(this::cancel);
         binding.desc.setText(desc);
     }
 
     private AlertDialog create(Activity activity, String title) {
-        return dialog = new MaterialAlertDialogBuilder(activity).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
+        return new MaterialAlertDialogBuilder(activity)
+                .setTitle(title)
+                .setView(binding.getRoot())
+                .setPositiveButton(R.string.update_confirm, null)
+                .setNegativeButton(R.string.dialog_negative, null)
+                .setCancelable(false)
+                .create();
     }
 
     private void cancel(View view) {
         Setting.putUpdate(false);
-        download.cancel();
-        dismiss();
+        if (download != null) {
+            download.cancel();
+        }
+        dialog.dismiss();
     }
 
     private void confirm(View view) {
         view.setEnabled(false);
+        // 在确认时初始化 Download 对象
+        download = Download.create(apkUrl, getFile(), this);
         download.start();
     }
 
