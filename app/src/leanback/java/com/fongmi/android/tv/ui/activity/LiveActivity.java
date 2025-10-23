@@ -153,7 +153,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mBinding.group.setListener(this);
         mBinding.channel.setListener(this);
         mBinding.epgData.setListener(this);
-        mBinding.control.seek.setListener(mPlayers);
+        mBinding.control.seek.setPlayer(mPlayers);
         mBinding.control.text.setOnClickListener(this::onTrack);
         mBinding.control.audio.setOnClickListener(this::onTrack);
         mBinding.control.video.setOnClickListener(this::onTrack);
@@ -498,7 +498,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void setTraffic() {
         Traffic.setSpeed(mBinding.widget.traffic);
-        App.post(mR2, Constant.INTERVAL_TRAFFIC);
+        App.post(mR2, 1000);
     }
 
     private void setR1Callback() {
@@ -521,17 +521,15 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mChannel.getLogo(), new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
+        ImgUtil.load(this, mChannel.getLogo(), new CustomTarget<>() {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
-                setMetadata();
             }
 
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
-                setMetadata();
             }
         });
     }
@@ -597,6 +595,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private void setChannel(Channel item) {
         App.post(mR0, 100);
         mChannel = item;
+        setMetadata();
         setArtwork();
         showInfo();
     }
@@ -604,6 +603,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private void setInfo() {
         mViewModel.getEpg(mChannel);
         mBinding.widget.play.setText("");
+        mBinding.widget.name.setMaxEms(48);
         mChannel.loadLogo(mBinding.widget.logo);
         mBinding.widget.title.setSelected(true);
         mBinding.widget.name.setText(mChannel.getName());
@@ -773,7 +773,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     private void setMetadata() {
         String title = mBinding.widget.name.getText().toString();
         String artist = mBinding.widget.play.getText().toString();
-        mPlayers.setMetadata(title, artist, mChannel.getLogo(), mBinding.exo.getDefaultArtwork());
+        mPlayers.setMetadata(title, artist, mChannel.getLogo());
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

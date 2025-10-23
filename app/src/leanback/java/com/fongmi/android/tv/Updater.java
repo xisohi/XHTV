@@ -1,7 +1,6 @@
 package com.fongmi.android.tv;
 
 import android.app.Activity;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -25,17 +24,19 @@ import java.util.Locale;
 public class Updater implements Download.Callback {
 
     private DialogUpdateBinding binding;
+    private final Download download;
     private AlertDialog dialog;
-    private boolean dev;
-    private String apkUrl; // 用于存储 APK 的下载地址
-    private Download download; // 延迟初始化
 
     private File getFile() {
         return Path.cache("update.apk");
     }
 
     private String getJson() {
-        return Github.getJson(dev, BuildConfig.FLAVOR_mode);
+        return Github.getJson(BuildConfig.FLAVOR_mode);
+    }
+
+    private String getApk() {
+        return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
     }
 
     public static Updater create() {
@@ -43,22 +44,12 @@ public class Updater implements Download.Callback {
     }
 
     public Updater() {
-        // 不在构造函数中初始化 Download 对象
+        this.download = Download.create(getApk(), getFile(), this);
     }
 
     public Updater force() {
         Notify.show(R.string.update_check);
         Setting.putUpdate(true);
-        return this;
-    }
-
-    public Updater release() {
-        this.dev = false;
-        return this;
-    }
-
-    public Updater dev() {
-        this.dev = true;
         return this;
     }
 
@@ -68,41 +59,19 @@ public class Updater implements Download.Callback {
     }
 
     public void start(Activity activity) {
+        if (!Setting.getUpdate()) return;
         App.execute(() -> doInBackground(activity));
-    }
-
-    private boolean need(int code, String name) {
-        return Setting.getUpdate() && (dev ? !name.equals(BuildConfig.VERSION_NAME) && code >= BuildConfig.VERSION_CODE : code > BuildConfig.VERSION_CODE);
     }
 
     private void doInBackground(Activity activity) {
         try {
-            Log.d("Updater", "开始检查更新...");
-            String jsonResponse = OkHttp.string(getJson());
-            Log.d("Updater", "获取到的 JSON 数据: " + jsonResponse);
-
-            JSONObject object = new JSONObject(jsonResponse);
+            JSONObject object = new JSONObject(OkHttp.string(getJson()));
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            String apkUrlTemplate = object.optString("apkurl"); // 获取 APK URL 模板
-
-            // 替换 {name} 占位符为实际的 APK 文件名
-            String apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi + ".apk";
-            apkUrl = apkUrlTemplate.replace("{name}", apkName);
-
-            if (!apkUrl.isEmpty()) {
-                Log.d("Updater", "APK 下载地址: " + apkUrl);
-            } else {
-                Log.e("Updater", "APK 下载地址为空");
-            }
-
-            if (need(code, name)) {
-                App.post(() -> show(activity, name, desc));
-            }
+            if (code > BuildConfig.VERSION_CODE) App.post(() -> show(activity, name, desc));
         } catch (Exception e) {
             e.printStackTrace();
-            Log.e("Updater", "检查更新失败", e);
         }
     }
 
@@ -111,30 +80,22 @@ public class Updater implements Download.Callback {
         binding.version.setText(ResUtil.getString(R.string.update_version, version));
         binding.confirm.setOnClickListener(this::confirm);
         binding.cancel.setOnClickListener(this::cancel);
-        dialog = create(activity);
-        dialog.show();
+        check().create(activity).show();
         binding.desc.setText(desc);
     }
 
     private AlertDialog create(Activity activity) {
-        return new MaterialAlertDialogBuilder(activity)
-                .setView(binding.getRoot())
-                .setCancelable(false)
-                .create();
+        return dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).setCancelable(false).create();
     }
 
     private void cancel(View view) {
         Setting.putUpdate(false);
-        if (download != null) {
-            download.cancel();
-        }
+        download.cancel();
         dismiss();
     }
 
     private void confirm(View view) {
-        binding.confirm.setEnabled(false);
-        // 在确认时初始化 Download 对象
-        download = Download.create(apkUrl, getFile(), this);
+        view.setEnabled(false);
         download.start();
     }
 
