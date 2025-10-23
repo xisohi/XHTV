@@ -1,10 +1,11 @@
 pluginManagement {
     repositories {
+        // 添加国内镜像
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
         gradlePluginPortal()
         mavenCentral()
         google()
-        // 添加国内镜像
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
     }
 }
 
@@ -14,7 +15,7 @@ dependencyResolutionManagement {
         // 国内镜像优先
         maven { url 'https://maven.aliyun.com/repository/public' }
         maven { url 'https://maven.aliyun.com/repository/google' }
-
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
         // 官方仓库
         mavenCentral()
         google()
