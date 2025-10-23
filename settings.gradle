@@ -1,26 +1,15 @@
 pluginManagement {
     repositories {
-        // 添加国内镜像
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
         gradlePluginPortal()
         mavenCentral()
         google()
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 国内镜像优先
-        maven { url 'https://maven.aliyun.com/repository/public' }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }
-        // 官方仓库
         mavenCentral()
         google()
-
-        // 特殊仓库
         flatDir { dirs "$rootDir/app/libs" }
         maven { url "https://jitpack.io" }
         maven {
@@ -29,7 +18,6 @@ dependencyResolutionManagement {
         }
     }
 }
-
 include ':app'
 include ':catvod'
 include ':chaquo'
