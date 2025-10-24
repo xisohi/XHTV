@@ -36,7 +36,7 @@ public class Updater implements Download.Callback {
     }
 
     private String getJson() {
-        return Github.getJson(dev, BuildConfig.FLAVOR_mode);
+        return Github.getJson(BuildConfig.FLAVOR_mode);
     }
 
     public static Updater create() {
