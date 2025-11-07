@@ -44,7 +44,8 @@ public class WallConfig {
     }
 
     public static String getDesc() {
-        return get().getConfig().getDesc();
+        // 修改：使用Config的getDisplayName方法
+        return get().getConfig().getDisplayName();
     }
 
     public static void load(Config config, Callback callback) {
@@ -83,6 +84,12 @@ public class WallConfig {
 
     private void loadConfig(Callback callback) {
         try {
+            // 添加URL空值检查
+            if (TextUtils.isEmpty(config.getUrl()) || config.isBuiltin()) {
+                App.post(() -> callback.error("壁纸配置URL为空，请检查配置"));
+                return;
+            }
+
             download();
             config.update();
             RefreshEvent.wall();
@@ -137,6 +144,9 @@ public class WallConfig {
     }
 
     public boolean needSync(String url) {
+        if (TextUtils.isEmpty(url) || TextUtils.isEmpty(config.getUrl())) {
+            return false;
+        }
         return sync || TextUtils.isEmpty(config.getUrl()) || url.equals(config.getUrl());
     }
 }
