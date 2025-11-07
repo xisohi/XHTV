@@ -61,7 +61,8 @@ public class LiveConfig {
     }
 
     public static String getDesc() {
-        return get().getConfig().getDesc();
+        // 修改：使用Config的getDisplayName方法
+        return get().getConfig().getDisplayName();
     }
 
     public static String getResp() {
@@ -93,7 +94,14 @@ public class LiveConfig {
         this.ads = new ArrayList<>();
         this.rules = new ArrayList<>();
         this.lives = new ArrayList<>();
-        return config(Config.live());
+
+        // 确保配置URL不为空
+        Config liveConfig = Config.live();
+        if (TextUtils.isEmpty(liveConfig.getUrl())) {
+            liveConfig.url(Constants.BUILTIN_PLACEHOLDER);
+        }
+
+        return config(liveConfig);
     }
 
     public LiveConfig config(Config config) {
@@ -123,11 +131,27 @@ public class LiveConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            Server.get().start();
-            String text = Decoder.getJson(UrlUtil.convert(config.getUrl()));
-            if (!Json.isObj(text)) clear().parseText(text, callback);
-            else checkJson(Json.parse(text).getAsJsonObject(), callback);
-            config.update();
+            // 添加URL空值检查
+            if (TextUtils.isEmpty(config.getUrl()) || config.isBuiltin()) {
+                // 如果是内置配置，使用真实URL加载
+                String loadUrl = config.isBuiltin() ? Constants.BUILTIN_URL : config.getUrl();
+                if (TextUtils.isEmpty(loadUrl)) {
+                    App.post(() -> callback.error("直播配置URL为空，请检查配置"));
+                    return;
+                }
+
+                Server.get().start();
+                String text = Decoder.getJson(UrlUtil.convert(loadUrl));
+                if (!Json.isObj(text)) clear().parseText(text, callback);
+                else checkJson(Json.parse(text).getAsJsonObject(), callback);
+                config.update();
+            } else {
+                Server.get().start();
+                String text = Decoder.getJson(UrlUtil.convert(config.getUrl()));
+                if (!Json.isObj(text)) clear().parseText(text, callback);
+                else checkJson(Json.parse(text).getAsJsonObject(), callback);
+                config.update();
+            }
         } catch (Throwable e) {
             if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
             else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
@@ -136,14 +160,21 @@ public class LiveConfig {
     }
 
     private void parseText(String text, Callback callback) {
-        Live live = new Live(parseName(config.getUrl()), config.getUrl()).sync();
-        lives = new ArrayList<>(List.of(live));
-        LiveParser.text(live, text);
-        setHome(live, false);
-        App.post(callback::success);
+        try {
+            Live live = new Live(parseName(config.getUrl()), config.getUrl()).sync();
+            lives = new ArrayList<>(List.of(live));
+            LiveParser.text(live, text);
+            setHome(live, false);
+            App.post(callback::success);
+        } catch (Exception e) {
+            e.printStackTrace();
+            App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
+        }
     }
 
     private String parseName(String url) {
+        if (TextUtils.isEmpty(url)) return "默认直播";
+
         Uri uri = Uri.parse(url);
         if ("file".equals(uri.getScheme())) return new File(url).getName();
         if (uri.getLastPathSegment() != null) return uri.getLastPathSegment();
@@ -153,6 +184,11 @@ public class LiveConfig {
     }
 
     private void checkJson(JsonObject object, Callback callback) {
+        if (object == null || object.entrySet().isEmpty()) {
+            App.post(() -> callback.error("直播配置内容为空"));
+            return;
+        }
+
         if (object.has("msg")) {
             App.post(() -> callback.error(object.get("msg").getAsString()));
         } else if (object.has("urls")) {
@@ -163,36 +199,73 @@ public class LiveConfig {
     }
 
     private void parseDepot(JsonObject object, Callback callback) {
-        List<Depot> items = Depot.arrayFrom(object.getAsJsonArray("urls").toString());
-        List<Config> configs = new ArrayList<>();
-        for (Depot item : items) configs.add(Config.find(item, 1));
-        Config.delete(config.getUrl());
-        config = configs.get(0);
-        loadConfig(callback);
+        try {
+            List<Depot> items = Depot.arrayFrom(object.getAsJsonArray("urls").toString());
+            List<Config> configs = new ArrayList<>();
+            for (Depot item : items) configs.add(Config.find(item, 1));
+            Config.delete(config.getUrl());
+            config = configs.get(0);
+            loadConfig(callback);
+        } catch (Exception e) {
+            e.printStackTrace();
+            App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
+        }
     }
 
     private void parseConfig(JsonObject object, Callback callback) {
         try {
             clear();
+
+            // 检查配置对象是否有效
+            if (object == null || object.entrySet().isEmpty()) {
+                App.post(() -> callback.error("直播配置内容为空"));
+                return;
+            }
+
             initLive(object);
             initOther(object);
+            if (callback != null) App.post(callback::success);
         } catch (Throwable e) {
             e.printStackTrace();
-        } finally {
-            if (callback != null) App.post(callback::success);
+            if (callback != null) App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
         }
     }
 
     private void initLive(JsonObject object) {
-        String spider = Json.safeString(object, "spider");
-        BaseLoader.get().parseJar(spider, false);
-        setLives(Json.safeListElement(object, "lives").stream().map(element -> Live.objectFrom(element, spider)).distinct().collect(Collectors.toCollection(ArrayList::new)));
-        Map<String, Live> items = Live.findAll().stream().collect(Collectors.toMap(Live::getName, Function.identity()));
-        for (Live live : getLives()) {
-            Live item = items.get(live.getName());
-            if (item != null) live.sync(item);
-            if (live.getName().equals(config.getHome())) setHome(live, false);
+        try {
+            String spider = Json.safeString(object, "spider");
+            BaseLoader.get().parseJar(spider, false);
+
+            // 检查lives配置是否存在
+            if (Json.isEmpty(object, "lives")) {
+                // 如果lives为空，创建默认直播配置
+                createDefaultLive();
+                return;
+            }
+
+            setLives(Json.safeListElement(object, "lives").stream().map(element -> Live.objectFrom(element, spider)).distinct().collect(Collectors.toCollection(ArrayList::new)));
+            Map<String, Live> items = Live.findAll().stream().collect(Collectors.toMap(Live::getName, Function.identity()));
+            for (Live live : getLives()) {
+                Live item = items.get(live.getName());
+                if (item != null) live.sync(item);
+                if (live.getName().equals(config.getHome())) setHome(live, false);
+            }
+
+            // 如果没有有效的直播配置，创建默认配置
+            if (getLives().isEmpty()) {
+                createDefaultLive();
+            }
+        } catch (Exception e) {
+            // 如果解析失败，创建默认直播配置
+            createDefaultLive();
+            e.printStackTrace();
         }
+    }
+
+    private void createDefaultLive() {
+        Live defaultLive = new Live("默认直播", config.getUrl()).sync();
+        lives = new ArrayList<>(List.of(defaultLive));
+        setHome(defaultLive, false);
     }
 
     private void initOther(JsonObject object) {
@@ -250,6 +323,9 @@ public class LiveConfig {
     }
 
     public boolean needSync(String url) {
+        if (TextUtils.isEmpty(url) || TextUtils.isEmpty(config.getUrl())) {
+            return false;
+        }
         return sync || TextUtils.isEmpty(config.getUrl()) || url.equals(config.getUrl());
     }
 
