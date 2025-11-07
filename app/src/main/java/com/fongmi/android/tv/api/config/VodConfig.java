@@ -90,6 +90,12 @@ public class VodConfig {
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
+
+        // 确保配置URL不为空
+        if (TextUtils.isEmpty(config.getUrl())) {
+            config.url(Constants.BUILTIN_URL);
+        }
+
         return this;
     }
 
@@ -125,6 +131,12 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
+            // 添加URL空值检查
+            if (TextUtils.isEmpty(config.getUrl())) {
+                App.post(() -> callback.error("配置URL为空，请检查配置"));
+                return;
+            }
+
             Server.get().start();
             String json = Decoder.getJson(UrlUtil.convert(config.getUrl()));
             JsonObject object = Json.parse(json).getAsJsonObject();
@@ -159,6 +171,13 @@ public class VodConfig {
     private void parseConfig(JsonObject object, Callback callback) {
         try {
             clear();
+
+            // 检查配置对象是否有效
+            if (object == null || object.entrySet().isEmpty()) {
+                App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, new Exception("配置内容为空"))));
+                return;
+            }
+
             initSite(object);
             initParse(object);
             initOther(object);
@@ -174,14 +193,50 @@ public class VodConfig {
     }
 
     private void initSite(JsonObject object) {
-        String spider = Json.safeString(object, "spider");
-        BaseLoader.get().parseJar(spider, true);
-        setSites(Json.safeListElement(object, "sites").stream().map(element -> Site.objectFrom(element, spider)).distinct().collect(Collectors.toCollection(ArrayList::new)));
-        Map<String, Site> items = Site.findAll().stream().collect(Collectors.toMap(Site::getKey, Function.identity()));
-        for (Site site : getSites()) {
-            Site item = items.get(site.getKey());
-            if (item != null) site.sync(item);
-            if (site.getKey().equals(config.getHome())) setHome(site, false);
+        try {
+            String spider = Json.safeString(object, "spider");
+            BaseLoader.get().parseJar(spider, true);
+
+            // 检查sites配置是否存在
+            if (Json.isEmpty(object, "sites")) {
+                // 如果sites为空，使用内置默认配置
+                useBuiltinConfig();
+                return;
+            }
+
+            setSites(Json.safeListElement(object, "sites").stream().map(element -> Site.objectFrom(element, spider)).distinct().collect(Collectors.toCollection(ArrayList::new)));
+            Map<String, Site> items = Site.findAll().stream().collect(Collectors.toMap(Site::getKey, Function.identity()));
+            for (Site site : getSites()) {
+                Site item = items.get(site.getKey());
+                if (item != null) site.sync(item);
+                if (site.getKey().equals(config.getHome())) setHome(site, false);
+            }
+        } catch (Exception e) {
+            // 如果解析失败，使用内置配置
+            useBuiltinConfig();
+            e.printStackTrace();
+        }
+    }
+
+    private void useBuiltinConfig() {
+        try {
+            // 使用内置配置URL
+            String builtinUrl = Constants.BUILTIN_URL;
+            String json = Decoder.getJson(UrlUtil.convert(builtinUrl));
+            JsonObject object = Json.parse(json).getAsJsonObject();
+
+            if (object != null && !object.entrySet().isEmpty()) {
+                clear();
+                initSite(object);
+                initParse(object);
+                initOther(object);
+                // 更新配置为内置配置
+                config.url(builtinUrl).update();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 如果内置配置也失败，创建空的sites列表避免崩溃
+            setSites(new ArrayList<>());
         }
     }
 
