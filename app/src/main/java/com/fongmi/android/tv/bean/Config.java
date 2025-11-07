@@ -176,9 +176,26 @@ public class Config {
     }
 
     public String getDesc() {
+        // 修改：如果是内置配置，显示名称而不是URL
+        if (isBuiltin()) {
+            return Constants.BUILTIN_NAME;
+        }
         if (!TextUtils.isEmpty(getName())) return getName();
         if (!TextUtils.isEmpty(getUrl())) return getUrl();
         return "";
+    }
+
+    // 新增：检查是否为内置配置
+    public boolean isBuiltin() {
+        return Constants.BUILTIN_PLACEHOLDER.equals(getUrl()) || Constants.BUILTIN_URL.equals(getUrl());
+    }
+
+    // 新增：获取显示名称（专门用于UI显示）
+    public String getDisplayName() {
+        if (isBuiltin()) {
+            return Constants.BUILTIN_NAME;
+        }
+        return TextUtils.isEmpty(getName()) ? getUrl() : getName();
     }
 
     public static List<Config> getAll(int type) {
@@ -199,17 +216,29 @@ public class Config {
 
     public static Config vod() {
         Config item = AppDatabase.get().getConfigDao().findOne(0);
-        return item == null ? create(0) : item;
+        // 修改：如果没有配置，返回内置配置
+        if (item == null) {
+            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
+        }
+        return item;
     }
 
     public static Config live() {
         Config item = AppDatabase.get().getConfigDao().findOne(1);
-        return item == null ? create(1) : item;
+        // 修改：如果没有配置，返回内置配置
+        if (item == null) {
+            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 1);
+        }
+        return item;
     }
 
     public static Config wall() {
         Config item = AppDatabase.get().getConfigDao().findOne(2);
-        return item == null ? create(2) : item;
+        // 修改：如果没有配置，返回内置配置
+        if (item == null) {
+            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 2);
+        }
+        return item;
     }
 
     public static Config find(int id) {
@@ -218,20 +247,29 @@ public class Config {
 
     public static Config find(String url, int type) {
         Config item = AppDatabase.get().getConfigDao().find(url, type);
+        // 修改：如果是内置配置，返回带名称的配置
+        if (Constants.BUILTIN_PLACEHOLDER.equals(url) || Constants.BUILTIN_URL.equals(url)) {
+            return item == null ? create(type, url, Constants.BUILTIN_NAME) : item.type(type).name(Constants.BUILTIN_NAME);
+        }
         return item == null ? create(type, url) : item.type(type);
     }
 
     public static Config find(String url, String name, int type) {
-        // 新增：如果名称是内置源名称，强制使用占位符 URL
+        // 修改：如果名称是内置源名称，强制使用占位符 URL
         if (name.equals(Constants.BUILTIN_NAME)) {
             url = Constants.BUILTIN_PLACEHOLDER;
         }
-        if (url.equals(Constants.BUILTIN_PLACEHOLDER)) {
-            return new Config()
-                    .type(type)
-                    .name(Constants.BUILTIN_NAME)
-                    .url(Constants.BUILTIN_PLACEHOLDER)
-                    .update();
+        if (url.equals(Constants.BUILTIN_PLACEHOLDER) || url.equals(Constants.BUILTIN_URL)) {
+            Config item = AppDatabase.get().getConfigDao().find(url, type);
+            if (item == null) {
+                return new Config()
+                        .type(type)
+                        .name(Constants.BUILTIN_NAME)
+                        .url(Constants.BUILTIN_PLACEHOLDER)
+                        .update();
+            } else {
+                return item.type(type).name(Constants.BUILTIN_NAME);
+            }
         }
         Config item = AppDatabase.get().getConfigDao().find(url, type);
         return item == null ? create(type, url, name) : item.type(type).name(name);
@@ -242,16 +280,24 @@ public class Config {
     }
 
     public static Config find(Config config, int type) {
+        // 修改：处理内置配置
+        if (config.isBuiltin()) {
+            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
+        }
         Config item = AppDatabase.get().getConfigDao().find(config.getUrl(), type);
         return item == null ? create(type, config.getUrl(), config.getName()) : item.type(type).name(config.getName());
     }
 
     public static Config find(Depot depot, int type) {
+        // 修改：处理内置配置
+        if (depot.getName().equals(Constants.BUILTIN_NAME)) {
+            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
+        }
         Config item = AppDatabase.get().getConfigDao().find(depot.getUrl(), type);
         return item == null ? create(type, depot.getUrl(), depot.getName()) : item.type(type).name(depot.getName());
     }
 
-    // ▼▼▼ 新增初始化方法 initBuiltin() ▼▼▼
+    // 初始化方法 initBuiltin()
     public static void initBuiltin() {
         // 初始化点播内置源
         if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 0) == null) {
@@ -291,9 +337,9 @@ public class Config {
         return this;
     }
 
-    // ▼▼▼ 修改update方法 ▼▼▼
+    // 修改update方法
     public Config update() {
-        if (getUrl().equals(Constants.BUILTIN_PLACEHOLDER)) {
+        if (isBuiltin()) {
             setTime(System.currentTimeMillis());
             return this; // 内置配置不保存到数据库
         }
@@ -301,7 +347,6 @@ public class Config {
         Prefers.put("config_" + getType(), getUrl());
         return save();
     }
-    // ▲▲▲ 结束修改 ▲▲▲
 
     public void delete() {
         AppDatabase.get().getConfigDao().delete(getUrl(), getType());
