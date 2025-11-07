@@ -63,7 +63,8 @@ public class VodConfig {
     }
 
     public static String getDesc() {
-        return get().getConfig().getDesc();
+        // 修改：使用Config的getDisplayName方法
+        return get().getConfig().getDisplayName();
     }
 
     public static int getHomeIndex() {
@@ -93,7 +94,7 @@ public class VodConfig {
 
         // 确保配置URL不为空
         if (TextUtils.isEmpty(config.getUrl())) {
-            config.url(Constants.BUILTIN_URL);
+            config.url(Constants.BUILTIN_PLACEHOLDER);
         }
 
         return this;
@@ -132,16 +133,26 @@ public class VodConfig {
     private void loadConfig(Callback callback) {
         try {
             // 添加URL空值检查
-            if (TextUtils.isEmpty(config.getUrl())) {
-                App.post(() -> callback.error("配置URL为空，请检查配置"));
-                return;
-            }
+            if (TextUtils.isEmpty(config.getUrl()) || config.isBuiltin()) {
+                // 如果是内置配置，使用真实URL加载
+                String loadUrl = config.isBuiltin() ? Constants.BUILTIN_URL : config.getUrl();
+                if (TextUtils.isEmpty(loadUrl)) {
+                    App.post(() -> callback.error("配置URL为空，请检查配置"));
+                    return;
+                }
 
-            Server.get().start();
-            String json = Decoder.getJson(UrlUtil.convert(config.getUrl()));
-            JsonObject object = Json.parse(json).getAsJsonObject();
-            checkJson(object, callback);
-            config.update();
+                Server.get().start();
+                String json = Decoder.getJson(UrlUtil.convert(loadUrl));
+                JsonObject object = Json.parse(json).getAsJsonObject();
+                checkJson(object, callback);
+                config.update();
+            } else {
+                Server.get().start();
+                String json = Decoder.getJson(UrlUtil.convert(config.getUrl()));
+                JsonObject object = Json.parse(json).getAsJsonObject();
+                checkJson(object, callback);
+                config.update();
+            }
         } catch (Throwable e) {
             if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
             else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
@@ -231,7 +242,7 @@ public class VodConfig {
                 initParse(object);
                 initOther(object);
                 // 更新配置为内置配置
-                config.url(builtinUrl).update();
+                config.url(Constants.BUILTIN_PLACEHOLDER).name(Constants.BUILTIN_NAME).update();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -265,9 +276,17 @@ public class VodConfig {
     }
 
     private void initLive(JsonObject object) {
-        Config temp = Config.find(config, 1).save();
-        boolean sync = LiveConfig.get().needSync(config.getUrl());
-        if (sync) LiveConfig.get().config(temp.update()).parse(object);
+        // 添加空值检查
+        if (config == null || TextUtils.isEmpty(config.getUrl())) {
+            return;
+        }
+
+        Config temp = Config.find(config, 1);
+        if (temp != null) {
+            temp.save();
+            boolean sync = LiveConfig.get().needSync(config.getUrl());
+            if (sync) LiveConfig.get().config(temp.update()).parse(object);
+        }
     }
 
     public List<Site> getSites() {
