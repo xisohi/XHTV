@@ -7,9 +7,11 @@ import androidx.annotation.Nullable;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.api.config.Constants;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.annotations.SerializedName;
@@ -176,7 +178,6 @@ public class Config {
     }
 
     public String getDesc() {
-        // 修改：如果是内置配置，显示名称而不是URL
         if (isBuiltin()) {
             return Constants.BUILTIN_NAME;
         }
@@ -185,17 +186,22 @@ public class Config {
         return "";
     }
 
-    // 新增：检查是否为内置配置
     public boolean isBuiltin() {
         return Constants.BUILTIN_PLACEHOLDER.equals(getUrl()) || Constants.BUILTIN_URL.equals(getUrl());
     }
 
-    // 新增：获取显示名称（专门用于UI显示）
     public String getDisplayName() {
         if (isBuiltin()) {
             return Constants.BUILTIN_NAME;
         }
         return TextUtils.isEmpty(getName()) ? getUrl() : getName();
+    }
+
+    public String getRealUrl() {
+        if (isBuiltin()) {
+            return Constants.BUILTIN_URL;
+        }
+        return getUrl();
     }
 
     public static List<Config> getAll(int type) {
@@ -216,7 +222,6 @@ public class Config {
 
     public static Config vod() {
         Config item = AppDatabase.get().getConfigDao().findOne(0);
-        // 修改：如果没有配置，返回内置配置
         if (item == null) {
             return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
         }
@@ -225,7 +230,6 @@ public class Config {
 
     public static Config live() {
         Config item = AppDatabase.get().getConfigDao().findOne(1);
-        // 修改：如果没有配置，返回内置配置
         if (item == null) {
             return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 1);
         }
@@ -234,7 +238,6 @@ public class Config {
 
     public static Config wall() {
         Config item = AppDatabase.get().getConfigDao().findOne(2);
-        // 修改：如果没有配置，返回内置配置
         if (item == null) {
             return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 2);
         }
@@ -247,7 +250,6 @@ public class Config {
 
     public static Config find(String url, int type) {
         Config item = AppDatabase.get().getConfigDao().find(url, type);
-        // 修改：如果是内置配置，返回带名称的配置
         if (Constants.BUILTIN_PLACEHOLDER.equals(url) || Constants.BUILTIN_URL.equals(url)) {
             return item == null ? create(type, url, Constants.BUILTIN_NAME) : item.type(type).name(Constants.BUILTIN_NAME);
         }
@@ -255,7 +257,6 @@ public class Config {
     }
 
     public static Config find(String url, String name, int type) {
-        // 修改：如果名称是内置源名称，强制使用占位符 URL
         if (name.equals(Constants.BUILTIN_NAME)) {
             url = Constants.BUILTIN_PLACEHOLDER;
         }
@@ -280,7 +281,6 @@ public class Config {
     }
 
     public static Config find(Config config, int type) {
-        // 修改：处理内置配置
         if (config.isBuiltin()) {
             return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
         }
@@ -289,7 +289,6 @@ public class Config {
     }
 
     public static Config find(Depot depot, int type) {
-        // 修改：处理内置配置
         if (depot.getName().equals(Constants.BUILTIN_NAME)) {
             return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
         }
@@ -297,9 +296,7 @@ public class Config {
         return item == null ? create(type, depot.getUrl(), depot.getName()) : item.type(type).name(depot.getName());
     }
 
-    // 初始化方法 initBuiltin()
     public static void initBuiltin() {
-        // 初始化点播内置源
         if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 0) == null) {
             new Config()
                     .type(0)
@@ -307,7 +304,6 @@ public class Config {
                     .url(Constants.BUILTIN_PLACEHOLDER)
                     .update();
         }
-        // 初始化直播内置源（按需添加）
         if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 1) == null) {
             new Config()
                     .type(1)
@@ -315,7 +311,6 @@ public class Config {
                     .url(Constants.BUILTIN_PLACEHOLDER)
                     .update();
         }
-        // 初始化壁纸内置源（按需添加）
         if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 2) == null) {
             new Config()
                     .type(2)
@@ -337,11 +332,10 @@ public class Config {
         return this;
     }
 
-    // 修改update方法
     public Config update() {
         if (isBuiltin()) {
             setTime(System.currentTimeMillis());
-            return this; // 内置配置不保存到数据库
+            return this;
         }
         setTime(System.currentTimeMillis());
         Prefers.put("config_" + getType(), getUrl());
