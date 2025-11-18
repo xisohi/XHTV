@@ -121,7 +121,8 @@ public class VodConfig {
                 loadUrl = Constants.BUILTIN_URL;
             }
 
-            String json = Decoder.getJson(UrlUtil.convert(loadUrl), TAG);
+            // 修改：只传递一个参数
+            String json = Decoder.getJson(UrlUtil.convert(loadUrl));
             checkJson(id, config, callback, Json.parse(json).getAsJsonObject());
             if (taskId.get() == id) config.update();
         } catch (Throwable e) {

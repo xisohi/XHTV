@@ -63,6 +63,14 @@ public class WallConfig {
         return this;
     }
 
+    // 添加clear方法
+    public WallConfig clear() {
+        config = null;
+        if (future != null && !future.isDone()) future.cancel(true);
+        future = null;
+        return this;
+    }
+
     private boolean isCanceled(Throwable e) {
         return e.getCause() instanceof InterruptedException || e.getCause() instanceof InterruptedIOException;
     }

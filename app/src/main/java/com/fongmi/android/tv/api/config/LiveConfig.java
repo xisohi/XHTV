@@ -136,7 +136,8 @@ public class LiveConfig {
                 loadUrl = Constants.BUILTIN_URL;
             }
 
-            String text = Decoder.getJson(UrlUtil.convert(loadUrl), TAG);
+            // 修改：只传递一个参数
+            String text = Decoder.getJson(UrlUtil.convert(loadUrl));
             if (Json.isObj(text)) checkJson(id, config, callback, Json.parse(text).getAsJsonObject());
             else parseText(id, config, callback, text);
             if (taskId.get() == id) config.update();
