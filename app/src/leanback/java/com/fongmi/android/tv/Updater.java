@@ -15,7 +15,7 @@ import com.fongmi.android.tv.utils.ResUtil;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
+import com.fongmi.android.tv.BuildConfig;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -32,7 +32,7 @@ public class Updater implements Download.Callback {
     }
 
     private String getJson() {
-        return Github.getJson(BuildConfig.FLAVOR_mode);
+        return Github.getJson(lkys);           //示例: https://xhys.lcjly.cn/update/lkys.json
     }
 
     private String getApk() {
