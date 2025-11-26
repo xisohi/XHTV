@@ -110,17 +110,26 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private String getUrl() {
+        String currentUrl = "";
         switch (type) {
-            case 0:
-                return VodConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : VodConfig.getUrl();
-            case 1:
-                return LiveConfig.getUrl().equals(Constants.BUILTIN_PLACEHOLDER) ? Constants.BUILTIN_NAME : LiveConfig.getUrl();
-            case 2:
-                String url = WallConfig.getUrl();
-                return (url.equals(Constants.BUILTIN_PLACEHOLDER) || url.equals(Constants.BUILTIN_URL)) ? Constants.BUILTIN_NAME : url;
+            case 0: // 点播源
+                currentUrl = VodConfig.getUrl();
+                break;
+            case 1: // 直播源
+                currentUrl = LiveConfig.getUrl();
+                break;
+            case 2: // 壁纸源
+                currentUrl = WallConfig.getUrl();
+                break;
             default:
                 return "";
         }
+
+        // ✅ 核心：当URL等于真实内置地址时，显示BUILTIN_NAME
+        if (currentUrl.equals(Constants.BUILTIN_URL)) {
+            return Constants.BUILTIN_NAME;
+        }
+        return currentUrl;
     }
 
     private void onChoose(View view) {
@@ -148,8 +157,9 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     private void onPositive(View view) {
         String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
+        // 如果用户输入的是BUILTIN_NAME，转换为真实URL保存
         if (text.equals(Constants.BUILTIN_NAME)) {
-            text = Constants.BUILTIN_PLACEHOLDER;
+            text = Constants.BUILTIN_URL; // ✅ 保存真实地址，不是PLACEHOLDER
         }
         if (edit) Config.find(url, type).url(text).update();
         if (text.isEmpty()) Config.delete(url, type);
