@@ -7,11 +7,9 @@ import androidx.annotation.Nullable;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
-import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.api.config.Constants;
-import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.annotations.SerializedName;
@@ -187,7 +185,7 @@ public class Config {
     }
 
     public boolean isBuiltin() {
-        return Constants.BUILTIN_PLACEHOLDER.equals(getUrl()) || Constants.BUILTIN_URL.equals(getUrl());
+        return Constants.BUILTIN_URL.equals(getUrl());
     }
 
     public String getDisplayName() {
@@ -223,7 +221,7 @@ public class Config {
     public static Config vod() {
         Config item = AppDatabase.get().getConfigDao().findOne(0);
         if (item == null) {
-            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 0);
         }
         return item;
     }
@@ -231,7 +229,7 @@ public class Config {
     public static Config live() {
         Config item = AppDatabase.get().getConfigDao().findOne(1);
         if (item == null) {
-            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 1);
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 1);
         }
         return item;
     }
@@ -239,7 +237,7 @@ public class Config {
     public static Config wall() {
         Config item = AppDatabase.get().getConfigDao().findOne(2);
         if (item == null) {
-            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 2);
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 2);
         }
         return item;
     }
@@ -250,7 +248,7 @@ public class Config {
 
     public static Config find(String url, int type) {
         Config item = AppDatabase.get().getConfigDao().find(url, type);
-        if (Constants.BUILTIN_PLACEHOLDER.equals(url) || Constants.BUILTIN_URL.equals(url)) {
+        if (Constants.BUILTIN_URL.equals(url)) {
             return item == null ? create(type, url, Constants.BUILTIN_NAME) : item.type(type).name(Constants.BUILTIN_NAME);
         }
         return item == null ? create(type, url) : item.type(type);
@@ -258,15 +256,15 @@ public class Config {
 
     public static Config find(String url, String name, int type) {
         if (name.equals(Constants.BUILTIN_NAME)) {
-            url = Constants.BUILTIN_PLACEHOLDER;
+            url = Constants.BUILTIN_URL;
         }
-        if (url.equals(Constants.BUILTIN_PLACEHOLDER) || url.equals(Constants.BUILTIN_URL)) {
+        if (url.equals(Constants.BUILTIN_URL)) {
             Config item = AppDatabase.get().getConfigDao().find(url, type);
             if (item == null) {
                 return new Config()
                         .type(type)
                         .name(Constants.BUILTIN_NAME)
-                        .url(Constants.BUILTIN_PLACEHOLDER)
+                        .url(Constants.BUILTIN_URL)
                         .update();
             } else {
                 return item.type(type).name(Constants.BUILTIN_NAME);
@@ -282,7 +280,7 @@ public class Config {
 
     public static Config find(Config config, int type) {
         if (config.isBuiltin()) {
-            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, type);
         }
         Config item = AppDatabase.get().getConfigDao().find(config.getUrl(), type);
         return item == null ? create(type, config.getUrl(), config.getName()) : item.type(type).name(config.getName());
@@ -290,33 +288,21 @@ public class Config {
 
     public static Config find(Depot depot, int type) {
         if (depot.getName().equals(Constants.BUILTIN_NAME)) {
-            return find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, type);
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, type);
         }
         Config item = AppDatabase.get().getConfigDao().find(depot.getUrl(), type);
         return item == null ? create(type, depot.getUrl(), depot.getName()) : item.type(type).name(depot.getName());
     }
 
     public static void initBuiltin() {
-        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 0) == null) {
-            new Config()
-                    .type(0)
-                    .name(Constants.BUILTIN_NAME)
-                    .url(Constants.BUILTIN_PLACEHOLDER)
-                    .update();
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 0) == null) {
+            new Config().type(0).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
         }
-        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 1) == null) {
-            new Config()
-                    .type(1)
-                    .name(Constants.BUILTIN_NAME)
-                    .url(Constants.BUILTIN_PLACEHOLDER)
-                    .update();
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 1) == null) {
+            new Config().type(1).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
         }
-        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_PLACEHOLDER, 2) == null) {
-            new Config()
-                    .type(2)
-                    .name(Constants.BUILTIN_NAME)
-                    .url(Constants.BUILTIN_PLACEHOLDER)
-                    .update();
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 2) == null) {
+            new Config().type(2).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
         }
     }
 
