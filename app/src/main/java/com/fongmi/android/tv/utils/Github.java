@@ -21,6 +21,6 @@ public class Github {
      * 示例: https://github.com/xisohi/XHYSosc/releases/download/lkys/lkys-armeabi_v7a.apk
      */
     public static String getApk(String name) {
-        return "https://github.com/xisohi/XHYSosc/releases/download/lkys/" + name + ".apk";
+        return "https://ghfast.top/https://github.com/xisohi/XHYSosc/releases/download/lkys/" + name + ".apk";
     }
 }
