@@ -33,7 +33,7 @@ public class Updater implements Download.Callback {
     }
 
     private String getJson() {
-        return Github.getJson(lkys);
+        return Github.getJson("lkys");
     }
 
     private String getApk() {
