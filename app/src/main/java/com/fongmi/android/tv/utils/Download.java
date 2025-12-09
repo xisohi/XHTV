@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.utils;
 
+import android.util.Log;  // ✅ 修复：添加缺失的Log导入
+
 import com.fongmi.android.tv.App;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
@@ -104,7 +106,7 @@ public class Download {
             while ((readBytes = input.read(buffer)) != -1) {
                 // 检查是否被取消
                 if (Thread.interrupted()) {
-                    Log.w("Download", "下载任务被取消: " + url);
+                    Log.w("Download", "下载任务被取消: " + url);  // ✅ 此Log现在可正常编译
                     return;
                 }
 
