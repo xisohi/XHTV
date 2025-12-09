@@ -23,9 +23,8 @@ public class Github {
     private static final String[] PROXY_URLS = {
             "https://ghfast.top/",              // 稳定，首选
             "https://ghproxy.net/",             // 国内速度快
-            "https://mirror.ghproxy.com/",      // 备用节点多
-            "https://kgithub.com/",             // 国内备案
-            "https://gh.api.99988866.xyz/"      // 个人维护（最后备用）
+            "https://github.catvod.com/",       // 猫影视git文件加速
+            "https://gh.xisohi.dpdns.org/"      // 个人维护（最后备用）
     };
 
     // 当前使用的代理索引（volatile确保多线程可见性）
