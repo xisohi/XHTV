@@ -1,6 +1,6 @@
 package com.fongmi.android.tv.utils;
 
-import android.util.Log;  // ✅ 修复：添加缺失的Log导入
+import android.util.Log;
 
 import com.fongmi.android.tv.App;
 import com.github.catvod.net.OkHttp;
@@ -26,7 +26,7 @@ public class Download {
     private final File file;
     private String url;
     private String tag;
-    private WeakReference<Callback> callbackRef; // 弱引用防止内存泄漏
+    private WeakReference<Callback> callbackRef;
     private Future<?> future;
 
     public static Download create(String url, File file) {
@@ -34,8 +34,8 @@ public class Download {
     }
 
     public Download(String url, File file) {
-        this.url = url;
         this.tag = url;
+        this.url = url;
         this.file = file;
     }
 
@@ -74,40 +74,47 @@ public class Download {
     }
 
     private void doInBackground() {
-        if (Thread.interrupted()) return;
-
-        Callback callback = callbackRef != null ? callbackRef.get() : null;
-        if (callback == null) return; // Activity已销毁，直接返回
+        // ✅ 修复：使用临时文件确保原子性
+        File tempFile = new File(file.getAbsolutePath() + ".tmp");
 
         try (Response res = OkHttp.newCall(url, tag).execute()) {
             if (res.isSuccessful() && res.body() != null) {
-                download(res.body().byteStream(), getLength(res));
-                Callback cb = callbackRef.get();
+                // ✅ 修复：下载到临时文件
+                download(res.body().byteStream(), getLength(res), tempFile);
+
+                // ✅ 修复：下载完成后重命名
+                if (!tempFile.renameTo(file)) {
+                    throw new IOException("无法重命名临时文件: " + tempFile);
+                }
+
+                Callback cb = callbackRef != null ? callbackRef.get() : null;
                 if (cb != null) App.post(() -> cb.success(file));
             } else {
                 throw new IOException("请求失败: HTTP " + res.code() + " " + res.message());
             }
         } catch (Exception e) {
+            // ✅ 修复：清理两个文件
+            Path.clear(tempFile);
             Path.clear(file);
-            Callback cb = callbackRef.get();
+
+            Callback cb = callbackRef != null ? callbackRef.get() : null;
             if (cb != null) App.post(() -> cb.error(e.getMessage()));
             else throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    private void download(InputStream is, double length) throws IOException {
+    private void download(InputStream is, double length, File temp) throws IOException {
         try (BufferedInputStream input = new BufferedInputStream(is);
-             FileOutputStream os = new FileOutputStream(Path.create(file))) {
+             FileOutputStream os = new FileOutputStream(Path.create(temp))) {
 
             byte[] buffer = new byte[16384];
             int readBytes;
             long totalBytes = 0;
 
             while ((readBytes = input.read(buffer)) != -1) {
-                // 检查是否被取消
+                // ✅ 修复：检查中断并清理
                 if (Thread.interrupted()) {
-                    Log.w("Download", "下载任务被取消: " + url);  // ✅ 此Log现在可正常编译
-                    return;
+                    throw new InterruptedException("下载被取消");
                 }
 
                 totalBytes += readBytes;
@@ -115,12 +122,17 @@ public class Download {
 
                 if (length > 0) {
                     int progress = (int) (totalBytes / length * 100.0);
-                    Callback cb = callbackRef.get();
+                    Callback cb = callbackRef != null ? callbackRef.get() : null;
                     if (cb != null) App.post(() -> cb.progress(progress));
                 }
             }
 
             os.flush(); // 确保数据完全写入磁盘
+        } catch (InterruptedException e) {
+            // ✅ 修复：清理并重新抛出
+            Path.clear(temp);
+            Thread.currentThread().interrupt(); // 恢复中断状态
+            throw new IOException("下载被中断", e);
         }
     }
 
