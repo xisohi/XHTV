@@ -110,6 +110,9 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer-smoothstreaming:' + media3Version
     implementation 'androidx.media3:media3-extractor:' + media3Version
     implementation 'androidx.media3:media3-ui:' + media3Version
+    implementation('io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0') {
+        exclude group: 'androidx.media3'
+    }
     implementation 'androidx.palette:palette:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.room:room-runtime:2.8.4'
