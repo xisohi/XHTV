@@ -5,6 +5,7 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -41,6 +42,10 @@ public class Config {
     private String home;
     @SerializedName("parse")
     private String parse;
+
+    @Ignore
+    @SerializedName("notice")
+    private String notice;
 
     public static List<Config> arrayFrom(String str) {
         Type listType = new TypeToken<List<Config>>() {}.getType();
@@ -136,6 +141,14 @@ public class Config {
         this.time = time;
     }
 
+    public String getNotice() {
+        return notice;
+    }
+
+    public void setNotice(String notice) {
+        this.notice = notice;
+    }
+
     public Config type(int type) {
         setType(type);
         return this;
@@ -153,21 +166,6 @@ public class Config {
 
     public Config name(String name) {
         setName(name);
-        return this;
-    }
-
-    public Config logo(String logo) {
-        setLogo(logo);
-        return this;
-    }
-
-    public Config home(String home) {
-        setHome(home);
-        return this;
-    }
-
-    public Config parse(String parse) {
-        setParse(parse);
         return this;
     }
 
