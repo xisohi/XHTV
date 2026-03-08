@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.Setting;
+import com.fongmi.android.tv.event.ConfigEvent;  // 导入 ConfigEvent
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.ui.custom.CustomWallView;
 import com.fongmi.android.tv.utils.FileUtil;
@@ -107,7 +108,8 @@ public abstract class BaseActivity extends AppCompatActivity {
     private void saveBitmapToCache(Bitmap bitmap) {
         try (FileOutputStream out = new FileOutputStream(FileUtil.getWallCache())) {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-            RefreshEvent.wall();
+            // 使用 ConfigEvent 而不是 RefreshEvent
+            ConfigEvent.wall();  // 触发壁纸配置更新事件
         } catch (IOException e) {
             Log.e(TAG, "saveBitmapToCache", e);
         }
@@ -138,7 +140,10 @@ public abstract class BaseActivity extends AppCompatActivity {
             new Handler().postDelayed(() -> {
                 wallView = new CustomWallView(this, null);
                 root.addView(wallView, 0, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
-                new Handler().postDelayed(RefreshEvent::wall, 300);
+                new Handler().postDelayed(() -> {
+                    // 使用 ConfigEvent 而不是 RefreshEvent
+                    ConfigEvent.wall();
+                }, 300);
             }, 300);
         } else {
             wallView = new CustomWallView(this, null);
@@ -196,6 +201,17 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onSubscribe(Object o) {
+        // 处理 ConfigEvent 事件
+        if (o instanceof ConfigEvent) {
+            ConfigEvent event = (ConfigEvent) o;
+            // 使用 type() 方法（record 自动生成的方法）
+            if (event.type() == ConfigEvent.Type.WALL) {
+                // 壁纸配置更新，刷新壁纸显示
+                if (wallView != null) {
+                    wallView.invalidate();  // 或者调用 wallView 的刷新方法
+                }
+            }
+        }
     }
 
     @Override
