@@ -35,7 +35,7 @@ public class App extends Application implements Application.ActivityLifecycleCal
     private final Gson gson;
     private final long time;
     private Hook hook;
-
+    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     public App() {
         instance = this;
         gson = new Gson();
@@ -169,7 +169,9 @@ public class App extends Application implements Application.ActivityLifecycleCal
         get().handler.removeCallbacks(runnable);
         if (delayMillis >= 0) get().handler.postDelayed(runnable, delayMillis);
     }
-
+    public static void execute(Runnable runnable) {
+        EXECUTOR.execute(runnable);
+    }
     public static void removeCallbacks(Runnable runnable) {
         get().handler.removeCallbacks(runnable);
     }
