@@ -28,11 +28,10 @@ import com.fongmi.android.tv.R;
 import com.github.catvod.utils.Shell;
 
 import java.net.NetworkInterface;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Formatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -124,7 +123,7 @@ public class Util {
         StringBuilder sb = new StringBuilder();
         text = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY).toString().replace("\u00A0", " ").replace("\u3000", " ");
         for (String line : text.split("\\r?\\n")) sb.append(line.trim()).append("\n");
-        return substring(sb.toString());
+        return substring(sb.toString()).trim();
     }
 
     public static String getAndroidId() {
@@ -168,18 +167,6 @@ public class Util {
         return text;
     }
 
-    public static Date parse(SimpleDateFormat format, String source) {
-        try {
-            return format.parse(source);
-        } catch (Exception e) {
-            return new Date(0);
-        }
-    }
-
-    public static long parse(List<SimpleDateFormat> formats, String source) {
-        return formats.stream().map(format -> parse(format, source)).map(Date::getTime).filter(time -> time > 0).findFirst().orElse(0L);
-    }
-
     public static boolean isLeanback() {
         return "leanback".equals(BuildConfig.FLAVOR_mode);
     }
@@ -196,14 +183,8 @@ public class Util {
         }
     }
 
-    public static Intent getChooser(Intent intent) {
-        List<ComponentName> components = new ArrayList<>();
-        for (ResolveInfo resolveInfo : App.get().getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
-            String pkgName = resolveInfo.activityInfo.packageName;
-            if (pkgName.equals(App.get().getPackageName())) {
-                components.add(new ComponentName(pkgName, resolveInfo.activityInfo.name));
-            }
-        }
-        return Intent.createChooser(intent, null).putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, components.toArray(new ComponentName[0]));
+    public static String timeMs(long timeMs) {
+        StringBuilder sb = new StringBuilder();
+        return format(sb, new Formatter(sb, Locale.getDefault()), timeMs);
     }
 }

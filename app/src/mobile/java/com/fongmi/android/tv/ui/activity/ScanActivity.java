@@ -49,7 +49,7 @@ public class ScanActivity extends BaseActivity implements BarcodeCallback {
     @Override
     public void barcodeResult(BarcodeResult result) {
         if (!result.getText().startsWith("http")) return;
-        ScanEvent.post(result.getText());
+        setResult(RESULT_OK, new Intent().putExtra("address", result.getText()));
         finish();
     }
 
