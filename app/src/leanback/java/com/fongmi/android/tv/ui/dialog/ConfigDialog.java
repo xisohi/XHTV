@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.api.config.Constants;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
@@ -109,16 +110,25 @@ public class ConfigDialog implements DialogInterface.OnDismissListener {
     }
 
     private String getUrl() {
+        String currentUrl = "";
         switch (type) {
-            case 0:
-                return VodConfig.getUrl();
-            case 1:
-                return LiveConfig.getUrl();
-            case 2:
-                return WallConfig.getUrl();
+            case 0: // 点播源
+                currentUrl = VodConfig.getUrl();
+                break;
+            case 1: // 直播源
+                currentUrl = LiveConfig.getUrl();
+                break;
+            case 2: // 壁纸源
+                currentUrl = WallConfig.getUrl();
+                break;
             default:
                 return "";
         }
+        // ✅ 核心：当URL等于真实内置地址时，显示BUILTIN_NAME
+        if (currentUrl.equals(Constants.BUILTIN_URL)) {
+            return Constants.BUILTIN_NAME;
+        }
+        return currentUrl;
     }
 
     private void onChoose(View view) {

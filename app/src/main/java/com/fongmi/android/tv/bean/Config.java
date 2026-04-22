@@ -10,6 +10,7 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.api.config.Constants;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.annotations.SerializedName;
@@ -66,65 +67,6 @@ public class Config {
 
     public static Config create(int type, String url, String name) {
         return new Config().type(type).url(url).name(name).insert();
-    }
-
-    public static List<Config> getAll(int type) {
-        return AppDatabase.get().getConfigDao().findByType(type);
-    }
-
-    public static List<Config> findUrls() {
-        return AppDatabase.get().getConfigDao().findUrlByType(0);
-    }
-
-    public static void delete(String url) {
-        AppDatabase.get().getConfigDao().delete(url);
-    }
-
-    public static void delete(String url, int type) {
-        AppDatabase.get().getConfigDao().delete(url, type);
-    }
-
-    public static Config vod() {
-        Config item = AppDatabase.get().getConfigDao().findOne(0);
-        return item == null ? create(0) : item;
-    }
-
-    public static Config live() {
-        Config item = AppDatabase.get().getConfigDao().findOne(1);
-        return item == null ? create(1) : item;
-    }
-
-    public static Config wall() {
-        Config item = AppDatabase.get().getConfigDao().findOne(2);
-        return item == null ? create(2) : item;
-    }
-
-    public static Config find(int id) {
-        return AppDatabase.get().getConfigDao().findById(id);
-    }
-
-    public static Config find(String url, int type) {
-        Config item = AppDatabase.get().getConfigDao().find(url, type);
-        return item == null ? create(type, url) : item.type(type);
-    }
-
-    public static Config find(String url, String name, int type) {
-        Config item = AppDatabase.get().getConfigDao().find(url, type);
-        return item == null ? create(type, url, name) : item.type(type).name(name);
-    }
-
-    public static Config find(Config config) {
-        return find(config, config.getType());
-    }
-
-    public static Config find(Config config, int type) {
-        Config item = AppDatabase.get().getConfigDao().find(config.getUrl(), type);
-        return item == null ? create(type, config.getUrl(), config.getName()) : item.type(type).name(config.getName());
-    }
-
-    public static Config find(Depot depot, int type) {
-        Config item = AppDatabase.get().getConfigDao().find(depot.getUrl(), type);
-        return item == null ? create(type, depot.getUrl(), depot.getName()) : item.type(type).name(depot.getName());
     }
 
     public int getId() {
@@ -232,9 +174,134 @@ public class Config {
     }
 
     public String getDesc() {
+        if (isBuiltin()) {
+            return Constants.BUILTIN_NAME;
+        }
         if (!TextUtils.isEmpty(getName())) return getName();
         if (!TextUtils.isEmpty(getUrl())) return getUrl();
         return "";
+    }
+
+    public boolean isBuiltin() {
+        return Constants.BUILTIN_URL.equals(getUrl());
+    }
+
+    public String getDisplayName() {
+        if (isBuiltin()) {
+            return Constants.BUILTIN_NAME;
+        }
+        return TextUtils.isEmpty(getName()) ? getUrl() : getName();
+    }
+
+    public String getRealUrl() {
+        if (isBuiltin()) {
+            return Constants.BUILTIN_URL;
+        }
+        return getUrl();
+    }
+
+    public static List<Config> getAll(int type) {
+        return AppDatabase.get().getConfigDao().findByType(type);
+    }
+
+    public static List<Config> findUrls() {
+        return AppDatabase.get().getConfigDao().findUrlByType(0);
+    }
+
+    public static void delete(String url) {
+        AppDatabase.get().getConfigDao().delete(url);
+    }
+
+    public static void delete(String url, int type) {
+        AppDatabase.get().getConfigDao().delete(url, type);
+    }
+
+    public static Config vod() {
+        Config item = AppDatabase.get().getConfigDao().findOne(0);
+        if (item == null) {
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 0);
+        }
+        return item;
+    }
+
+    public static Config live() {
+        Config item = AppDatabase.get().getConfigDao().findOne(1);
+        if (item == null) {
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 1);
+        }
+        return item;
+    }
+
+    public static Config wall() {
+        Config item = AppDatabase.get().getConfigDao().findOne(2);
+        if (item == null) {
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, 2);
+        }
+        return item;
+    }
+
+    public static Config find(int id) {
+        return AppDatabase.get().getConfigDao().findById(id);
+    }
+
+    public static Config find(String url, int type) {
+        Config item = AppDatabase.get().getConfigDao().find(url, type);
+        if (Constants.BUILTIN_URL.equals(url)) {
+            return item == null ? create(type, url, Constants.BUILTIN_NAME) : item.type(type).name(Constants.BUILTIN_NAME);
+        }
+        return item == null ? create(type, url) : item.type(type);
+    }
+
+    public static Config find(String url, String name, int type) {
+        if (name.equals(Constants.BUILTIN_NAME)) {
+            url = Constants.BUILTIN_URL;
+        }
+        if (url.equals(Constants.BUILTIN_URL)) {
+            Config item = AppDatabase.get().getConfigDao().find(url, type);
+            if (item == null) {
+                return new Config()
+                        .type(type)
+                        .name(Constants.BUILTIN_NAME)
+                        .url(Constants.BUILTIN_URL)
+                        .update();
+            } else {
+                return item.type(type).name(Constants.BUILTIN_NAME);
+            }
+        }
+        Config item = AppDatabase.get().getConfigDao().find(url, type);
+        return item == null ? create(type, url, name) : item.type(type).name(name);
+    }
+
+    public static Config find(Config config) {
+        return find(config, config.getType());
+    }
+
+    public static Config find(Config config, int type) {
+        if (config.isBuiltin()) {
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, type);
+        }
+        Config item = AppDatabase.get().getConfigDao().find(config.getUrl(), type);
+        return item == null ? create(type, config.getUrl(), config.getName()) : item.type(type).name(config.getName());
+    }
+
+    public static Config find(Depot depot, int type) {
+        if (depot.getName().equals(Constants.BUILTIN_NAME)) {
+            return find(Constants.BUILTIN_URL, Constants.BUILTIN_NAME, type);
+        }
+        Config item = AppDatabase.get().getConfigDao().find(depot.getUrl(), type);
+        return item == null ? create(type, depot.getUrl(), depot.getName()) : item.type(type).name(depot.getName());
+    }
+
+    public static void initBuiltin() {
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 0) == null) {
+            new Config().type(0).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
+        }
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 1) == null) {
+            new Config().type(1).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
+        }
+        if (AppDatabase.get().getConfigDao().find(Constants.BUILTIN_URL, 2) == null) {
+            new Config().type(2).name(Constants.BUILTIN_NAME).url(Constants.BUILTIN_URL).update();
+        }
     }
 
     public Config insert() {
@@ -250,7 +317,10 @@ public class Config {
     }
 
     public Config update() {
-        if (isEmpty()) return this;
+        if (isBuiltin()) {
+            setTime(System.currentTimeMillis());
+            return this;
+        }
         setTime(System.currentTimeMillis());
         Prefers.put("config_" + getType(), getUrl());
         return save();

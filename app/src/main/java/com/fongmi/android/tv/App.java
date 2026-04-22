@@ -13,6 +13,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.os.HandlerCompat;
 
+import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.hook.Hook;
 import com.github.catvod.Init;
@@ -104,8 +106,36 @@ public class App extends Application implements Application.ActivityLifecycleCal
     @Override
     public void onCreate() {
         super.onCreate();
+        Config.initBuiltin(); // 初始化内置源
+        loadBuiltinSource(); // 添加这行
         Notify.createChannel();
         registerActivityLifecycleCallbacks(this);
+    }
+    // 新增方法：加载内置源
+    private void loadBuiltinSource() {
+        try {
+            Config builtinConfig = Config.find(
+                    com.fongmi.android.tv.api.config.Constants.BUILTIN_URL,
+                    com.fongmi.android.tv.api.config.Constants.BUILTIN_NAME,
+                    0
+            );
+
+            Log.i("App", "🚀 加载内置源: " + builtinConfig.getUrl());
+
+            VodConfig.load(builtinConfig, new com.fongmi.android.tv.impl.Callback() {
+                @Override
+                public void success() {
+                    Log.i("App", "✅ 内置源加载成功");
+                }
+
+                @Override
+                public void error(String msg) {
+                    Log.e("App", "❌ 内置源加载失败: " + msg);
+                }
+            });
+        } catch (Exception e) {
+            Log.e("App", "加载异常", e);
+        }
     }
 
     @Override
