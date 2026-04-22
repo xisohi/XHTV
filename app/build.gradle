@@ -51,7 +51,7 @@ android {
         buildConfig = true
         viewBinding = true
     }
-
+/*
     signingConfigs {
         release {
             storeFile file(localProps['storeFile'])
@@ -60,12 +60,12 @@ android {
             storePassword localProps['storePassword']
         }
     }
-
+*/
     buildTypes {
         release {
             minifyEnabled = true
             shrinkResources = true
-            signingConfig = signingConfigs.release
+//            signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
         }
     }
