@@ -32,7 +32,7 @@
             android:focusableInTouchMode="true"
             android:nextFocusDown="@id/tabAppearance"
             android:text="@string/danmaku_reset"
-            android:textColor="?attr/colorPrimary" />
+            android:textColor="?attr/colorOnSurface" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
