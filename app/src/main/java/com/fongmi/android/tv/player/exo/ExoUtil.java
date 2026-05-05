@@ -70,7 +70,6 @@ public class ExoUtil {
         builder.setSubtitleConfigurations(buildSubtitleConfigs(spec.getSubs()));
         builder.setDrmConfiguration(buildDrmConfig(spec.getDrm()));
         builder.setRequestMetadata(buildRequestMetadata(spec));
-        builder.setLiveConfiguration(buildLiveConfig());
         builder.setMediaMetadata(spec.getMetadata());
         builder.setAdblock(Setting.isAdblock());
         builder.setMimeType(spec.getFormat());
