@@ -126,10 +126,6 @@ public class ExoUtil {
         return new MediaItem.RequestMetadata.Builder().setMediaUri(spec.getUri()).setExtras(PlayerHelper.toBundle(spec.getHeaders())).build();
     }
 
-    private static MediaItem.LiveConfiguration buildLiveConfig() {
-        return new MediaItem.LiveConfiguration.Builder().setTargetOffsetMs(5000).setMinPlaybackSpeed(0.97f).setMaxPlaybackSpeed(1.03f).build();
-    }
-
     private static List<MediaItem.SubtitleConfiguration> buildSubtitleConfigs(List<Sub> subs) {
         List<MediaItem.SubtitleConfiguration> configs = new ArrayList<>();
         if (subs != null) for (Sub sub : subs) configs.add(buildSubConfig(sub));
