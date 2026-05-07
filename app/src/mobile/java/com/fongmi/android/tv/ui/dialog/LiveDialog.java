@@ -14,6 +14,7 @@ import com.fongmi.android.tv.impl.LiveCallback;
 import com.fongmi.android.tv.ui.adapter.LiveAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class LiveDialog implements LiveAdapter.OnClickListener {
@@ -44,8 +45,8 @@ public class LiveDialog implements LiveAdapter.OnClickListener {
     }
 
     private void init(Activity activity) {
-        this.binding = DialogLiveBinding.inflate(LayoutInflater.from(activity));
-        this.dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).create();
+        this.binding = DialogLiveBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
+        this.dialog = new MaterialAlertDialogBuilder(Util.wrapContext(activity)).setView(binding.getRoot()).create();
         this.adapter = new LiveAdapter(this);
     }
 

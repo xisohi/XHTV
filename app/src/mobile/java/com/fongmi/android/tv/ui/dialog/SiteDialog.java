@@ -12,6 +12,7 @@ import com.fongmi.android.tv.databinding.DialogSiteBinding;
 import com.fongmi.android.tv.impl.SiteCallback;
 import com.fongmi.android.tv.ui.adapter.SiteAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
+import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SiteDialog implements SiteAdapter.OnClickListener {
@@ -40,8 +41,8 @@ public class SiteDialog implements SiteAdapter.OnClickListener {
     }
 
     private void init(Activity activity) {
-        this.binding = DialogSiteBinding.inflate(LayoutInflater.from(activity));
-        this.dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).create();
+        this.binding = DialogSiteBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
+        this.dialog = new MaterialAlertDialogBuilder(Util.wrapContext(activity)).setView(binding.getRoot()).create();
         this.adapter = new SiteAdapter(this);
     }
 

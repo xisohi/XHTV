@@ -13,7 +13,7 @@ import com.fongmi.android.tv.databinding.DialogUaBinding;
 import com.fongmi.android.tv.impl.UaCallback;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
-import com.github.catvod.utils.Util;
+import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class UaDialog {
@@ -29,7 +29,7 @@ public class UaDialog {
 
     public UaDialog(Fragment fragment) {
         this.callback = (UaCallback) fragment;
-        this.binding = DialogUaBinding.inflate(LayoutInflater.from(fragment.getContext()));
+        this.binding = DialogUaBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
         this.append = true;
     }
 
@@ -40,7 +40,7 @@ public class UaDialog {
     }
 
     private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setTitle(R.string.player_ua).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
+        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(R.string.player_ua).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
         dialog.getWindow().setDimAmount(0);
         dialog.show();
     }
@@ -67,10 +67,10 @@ public class UaDialog {
     private void detect(String s) {
         if (append && "c".equalsIgnoreCase(s)) {
             append = false;
-            binding.text.setText(Util.CHROME);
+            binding.text.setText(com.github.catvod.utils.Util.CHROME);
         } else if (append && "o".equalsIgnoreCase(s)) {
             append = false;
-            binding.text.setText(Util.OKHTTP);
+            binding.text.setText(com.github.catvod.utils.Util.OKHTTP);
         } else if (s.length() > 1) {
             append = false;
         } else if (s.isEmpty()) {

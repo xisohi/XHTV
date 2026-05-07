@@ -38,7 +38,7 @@ public class LinkDialog {
 
     public LinkDialog(Fragment fragment) {
         this.fragment = fragment;
-        this.binding = DialogLinkBinding.inflate(LayoutInflater.from(fragment.getContext()));
+        this.binding = DialogLinkBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
     }
 
     public void show() {
@@ -48,7 +48,7 @@ public class LinkDialog {
     }
 
     private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setTitle(R.string.play).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
+        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(R.string.play).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
         dialog.getWindow().setDimAmount(0);
         dialog.show();
     }

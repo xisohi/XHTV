@@ -30,11 +30,11 @@
         android:background="@color/transparent"
         app:tabContentStart="20dp"
         app:tabIndicatorAnimationMode="elastic"
-        app:tabIndicatorColor="?attr/colorControlActivated"
+        app:tabIndicatorColor="?attr/colorPrimary"
         app:tabIndicatorFullWidth="false"
         app:tabIndicatorHeight="2dp"
         app:tabMode="scrollable"
-        app:tabSelectedTextColor="?attr/colorControlActivated"
+        app:tabSelectedTextColor="?attr/colorPrimary"
         app:tabTextColor="?attr/colorOnSurfaceVariant" />
 
     <androidx.viewpager2.widget.ViewPager2

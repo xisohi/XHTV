@@ -27,7 +27,7 @@ public class InfoDialog {
     }
 
     public InfoDialog(Activity activity) {
-        this.binding = DialogInfoBinding.inflate(LayoutInflater.from(activity));
+        this.binding = DialogInfoBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
         this.callback = (Listener) activity;
     }
 
@@ -55,7 +55,7 @@ public class InfoDialog {
     }
 
     private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setView(binding.getRoot()).create();
+        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setView(binding.getRoot()).create();
         dialog.getWindow().setDimAmount(0);
         dialog.show();
     }

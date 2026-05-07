@@ -12,6 +12,7 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogUaBinding;
 import com.fongmi.android.tv.impl.DanmakuCallback;
 import com.fongmi.android.tv.setting.DanmakuSetting;
+import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class DanmakuApiDialog {
@@ -26,7 +27,7 @@ public class DanmakuApiDialog {
 
     public DanmakuApiDialog(Fragment fragment) {
         this.callback = (DanmakuCallback) fragment;
-        this.binding = DialogUaBinding.inflate(LayoutInflater.from(fragment.getContext()));
+        this.binding = DialogUaBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
     }
 
     public void show() {
@@ -36,7 +37,7 @@ public class DanmakuApiDialog {
     }
 
     private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setTitle(R.string.danmaku_api).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, null).create();
+        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(R.string.danmaku_api).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, null).create();
         dialog.getWindow().setDimAmount(0);
         dialog.show();
     }

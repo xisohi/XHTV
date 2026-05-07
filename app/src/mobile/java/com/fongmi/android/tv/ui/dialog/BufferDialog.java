@@ -10,6 +10,7 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogBufferBinding;
 import com.fongmi.android.tv.impl.BufferCallback;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class BufferDialog {
@@ -24,7 +25,7 @@ public class BufferDialog {
 
     public BufferDialog(Fragment fragment) {
         this.callback = (BufferCallback) fragment;
-        this.binding = DialogBufferBinding.inflate(LayoutInflater.from(fragment.getContext()));
+        this.binding = DialogBufferBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
     }
 
     public void show() {
@@ -33,7 +34,7 @@ public class BufferDialog {
     }
 
     private void initDialog() {
-        AlertDialog dialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setTitle(R.string.player_buffer).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
+        AlertDialog dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(R.string.player_buffer).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
         dialog.getWindow().setDimAmount(0);
         dialog.show();
     }

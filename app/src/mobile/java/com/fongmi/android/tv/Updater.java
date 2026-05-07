@@ -15,6 +15,7 @@ import com.fongmi.android.tv.utils.Github;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Task;
+import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -79,7 +80,7 @@ public class Updater implements Download.Callback {
     }
 
     private void show(Activity activity, String version, String desc) {
-        binding = DialogUpdateBinding.inflate(LayoutInflater.from(activity));
+        binding = DialogUpdateBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
         check().create(activity, ResUtil.getString(R.string.update_version, version)).show();
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(this::confirm);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(this::cancel);
@@ -87,7 +88,7 @@ public class Updater implements Download.Callback {
     }
 
     private AlertDialog create(Activity activity, String title) {
-        return dialog = new MaterialAlertDialogBuilder(activity).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
+        return dialog = new MaterialAlertDialogBuilder(Util.wrapContext(activity)).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
     }
 
     private void cancel(View view) {
