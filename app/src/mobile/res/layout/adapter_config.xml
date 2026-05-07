@@ -14,7 +14,7 @@
         android:layout_weight="1"
         android:ellipsize="middle"
         android:singleLine="true"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="14sp"
         tools:text="https://fongmi.github.io/cat.json" />
 
