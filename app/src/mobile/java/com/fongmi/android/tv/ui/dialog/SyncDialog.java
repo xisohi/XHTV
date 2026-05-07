@@ -117,6 +117,7 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private void getDevice() {
         adapter.setItems(Device.getAll(), () -> {
             if (adapter.getItemCount() == 0) onRefresh();
+            else binding.recycler.setVisibility(View.VISIBLE);
         });
     }
 
@@ -141,6 +142,7 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         adapter.clear(() -> {
             Device.delete();
             scanTask.start();
+            binding.recycler.setVisibility(View.GONE);
         });
     }
 
@@ -150,6 +152,7 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     public void onFind(Device device) {
+        binding.recycler.setVisibility(View.VISIBLE);
         adapter.sort(device);
     }
 

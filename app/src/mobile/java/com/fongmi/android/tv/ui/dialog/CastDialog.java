@@ -118,11 +118,16 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         binding.recycler.addItemDecoration(new SpaceItemDecoration(1, 16));
     }
 
+    private void setRecyclerVisible() {
+        binding.recycler.setVisibility(adapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
+    }
+
     private void getDevice() {
         adapter.setItems(Device.getAll(), () -> {
             adapter.sort(DLNACastManager.get().getRegistered());
             if (adapter.getItemCount() == 0) onRefresh();
             else DLNACastManager.get().search();
+            setRecyclerVisible();
         });
     }
 
@@ -136,6 +141,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
             if (fm) scanTask.start();
             adapter.sort(DLNACastManager.get().getRegistered());
             DLNACastManager.get().search();
+            setRecyclerVisible();
         });
     }
 
@@ -146,6 +152,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     public void onDeviceAdded(Device device) {
+        binding.recycler.setVisibility(View.VISIBLE);
         adapter.sort(device);
     }
 
@@ -156,6 +163,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     public void onFind(Device device) {
+        binding.recycler.setVisibility(View.VISIBLE);
         adapter.sort(device);
     }
 
