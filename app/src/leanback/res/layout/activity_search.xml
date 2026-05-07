@@ -47,7 +47,7 @@
                 android:nextFocusDown="@id/keyboard"
                 android:singleLine="true"
                 android:textColor="?attr/colorOnSurface"
-                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:textColorHint="?attr/colorOnSurface"
                 android:textCursorDrawable="@drawable/shape_cursor"
                 android:textSize="24sp" />
 
