@@ -43,7 +43,7 @@ public class FilterDialog extends BaseBottomSheetDialog {
 
     @Override
     protected void initView() {
-        binding.recycler.setAdapter(new FilterAdapter(callback, filter));
         binding.recycler.setHasFixedSize(true);
+        binding.recycler.setAdapter(new FilterAdapter(callback, filter));
     }
 }

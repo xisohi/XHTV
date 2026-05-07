@@ -28,6 +28,7 @@ import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.activity.ScanActivity;
 import com.fongmi.android.tv.ui.adapter.DeviceAdapter;
+import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.ScanTask;
@@ -110,6 +111,7 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private void setRecyclerView() {
         binding.recycler.setHasFixedSize(false);
         binding.recycler.setAdapter(adapter = new DeviceAdapter(this));
+        binding.recycler.addItemDecoration(new SpaceItemDecoration(1, 16));
     }
 
     private void getDevice() {
