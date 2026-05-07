@@ -72,7 +72,6 @@ abstract class BaseConfig {
     }
 
     protected void setProxy(List<Proxy> proxy) {
-        OkHttp.authenticator().addAll(proxy);
         OkHttp.selector().addAll(proxy);
     }
 

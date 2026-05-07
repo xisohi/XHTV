@@ -4,12 +4,12 @@ import com.github.catvod.bean.Proxy;
 import com.github.catvod.utils.Util;
 
 import java.io.IOException;
+import java.net.Authenticator;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Stream;
 
 public class OkProxySelector extends ProxySelector {
 
@@ -19,17 +19,21 @@ public class OkProxySelector extends ProxySelector {
     public OkProxySelector() {
         proxy = new CopyOnWriteArrayList<>();
         system = ProxySelector.getDefault();
+        Authenticator.setDefault(new ProxyAuthenticator(this));
     }
 
     public synchronized void addAll(List<Proxy> items) {
         items.forEach(Proxy::init);
-        List<Proxy> newList = Stream.concat(proxy.stream(), items.stream()).sorted().toList();
-        proxy.clear();
-        proxy.addAll(newList);
+        proxy.addAll(items);
+        proxy.sort(null);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         proxy.clear();
+    }
+
+    public List<Proxy> getProxy() {
+        return proxy;
     }
 
     private List<java.net.Proxy> fallback(URI uri) {
