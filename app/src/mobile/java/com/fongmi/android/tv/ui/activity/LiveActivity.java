@@ -345,7 +345,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onInfo() {
-        InfoDialog.create(this).title(mBinding.control.title.getText()).headers(player().getHeaders()).url(player().getUrl()).show();
+        InfoDialog.create().title(mBinding.control.title.getText()).headers(player().getHeaders()).url(player().getUrl()).show(this);
     }
 
     private void onLock() {
@@ -374,7 +374,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     private void onHome() {
         if (LiveConfig.isOnly()) setLive(getHome());
-        else LiveDialog.create(this).show();
+        else LiveDialog.show(this);
         hideControl();
     }
 
@@ -402,7 +402,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onConfig() {
-        HistoryDialog.create(this).readOnly().type(1).show();
+        HistoryDialog.create().live().readOnly().show(this);
         hideControl();
     }
 

@@ -1,35 +1,36 @@
 package com.fongmi.android.tv;
 
-import android.app.Activity;
-import android.content.DialogInterface;
-import android.view.LayoutInflater;
 import android.view.View;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.FragmentActivity;
 
-import com.fongmi.android.tv.databinding.DialogUpdateBinding;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.ui.dialog.UpdateDialog;
 import com.fongmi.android.tv.utils.Download;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Github;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Task;
-import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.Locale;
 
-public class Updater implements Download.Callback {
+public class Updater implements Download.Callback, UpdateDialog.Listener {
 
-    private DialogUpdateBinding binding;
     private final Download download;
-    private AlertDialog dialog;
+    private UpdateDialog dialog;
+
+    public Updater() {
+        this.download = Download.create(getApk(), getFile());
+    }
+
+    public static Updater create() {
+        return new Updater();
+    }
 
     private File getFile() {
         return Path.cache("update.apk");
@@ -43,63 +44,46 @@ public class Updater implements Download.Callback {
         return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
     }
 
-    public static Updater create() {
-        return new Updater();
-    }
-
-    public Updater() {
-        this.download = Download.create(getApk(), getFile());
-    }
-
     public Updater force() {
         Notify.show(R.string.update_check);
         Setting.putUpdate(true);
         return this;
     }
 
-    private Updater check() {
-        dismiss();
-        return this;
-    }
-
-    public void start(Activity activity) {
+    public void start(FragmentActivity activity) {
         if (!Setting.getUpdate()) return;
         Task.execute(() -> doInBackground(activity));
     }
 
-    private void doInBackground(Activity activity) {
+    private void doInBackground(FragmentActivity activity) {
         try {
             JSONObject object = new JSONObject(OkHttp.string(getJson()));
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            if (code > BuildConfig.VERSION_CODE) App.post(() -> show(activity, name, desc));
+            if (code <= BuildConfig.VERSION_CODE) return;
+            App.post(() -> show(activity, name, desc));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void show(Activity activity, String version, String desc) {
-        binding = DialogUpdateBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
-        check().create(activity, ResUtil.getString(R.string.update_version, version)).show();
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(this::confirm);
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(this::cancel);
-        binding.desc.setText(desc);
+    private void show(FragmentActivity activity, String version, String desc) {
+        dismiss();
+        dialog = UpdateDialog.create().title(ResUtil.getString(R.string.update_version, version)).desc(desc).listener(this).show(activity);
     }
 
-    private AlertDialog create(Activity activity, String title) {
-        return dialog = new MaterialAlertDialogBuilder(Util.wrapContext(activity)).setTitle(title).setView(binding.getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false).create();
+    @Override
+    public void onConfirm(View view) {
+        view.setEnabled(false);
+        download.start(this);
     }
 
-    private void cancel(View view) {
+    @Override
+    public void onCancel(View view) {
         Setting.putUpdate(false);
         download.cancel();
         dismiss();
-    }
-
-    private void confirm(View view) {
-        view.setEnabled(false);
-        download.start(this);
     }
 
     private void dismiss() {
@@ -111,7 +95,7 @@ public class Updater implements Download.Callback {
 
     @Override
     public void progress(int progress) {
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setText(String.format(Locale.getDefault(), "%1$d%%", progress));
+        if (dialog != null) dialog.setProgress(progress);
     }
 
     @Override

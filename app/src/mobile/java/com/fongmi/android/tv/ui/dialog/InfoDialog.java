@@ -1,70 +1,70 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Activity;
+import android.app.Dialog;
+import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.LayoutInflater;
 import android.view.View;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
 
 import com.fongmi.android.tv.databinding.DialogInfoBinding;
 import com.fongmi.android.tv.utils.Util;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Map;
 
-public class InfoDialog {
+public class InfoDialog extends BaseAlertDialog {
 
-    private final DialogInfoBinding binding;
-    private final Listener callback;
-    private AlertDialog dialog;
-    private CharSequence title;
+    private DialogInfoBinding binding;
     private String header;
+    private String title;
     private String url;
 
-    public static InfoDialog create(Activity activity) {
-        return new InfoDialog(activity);
-    }
-
-    public InfoDialog(Activity activity) {
-        this.binding = DialogInfoBinding.inflate(LayoutInflater.from(Util.wrapContext(activity)));
-        this.callback = (Listener) activity;
+    public static InfoDialog create() {
+        return new InfoDialog();
     }
 
     public InfoDialog title(CharSequence title) {
-        this.title = title;
+        this.title = TextUtils.isEmpty(title) ? "" : title.toString();
         return this;
     }
 
-    public InfoDialog headers(Map<String, String> headers) {
-        StringBuilder sb = new StringBuilder();
-        for (String key : headers.keySet()) sb.append(key).append(" : ").append(headers.get(key)).append("\n");
-        this.header = Util.substring(sb.toString());
+    public InfoDialog headers(Map<String, String> header) {
+        this.header = buildHeader(header);
         return this;
     }
 
     public InfoDialog url(String url) {
-        this.url = fix(url);
+        this.url = TextUtils.isEmpty(url) ? "" : url.startsWith("data") ? url.substring(0, Math.min(url.length(), 128)).concat("...") : url;
         return this;
     }
 
-    public void show() {
-        initDialog();
-        initView();
-        initEvent();
+    public void show(FragmentActivity activity) {
+        show(activity.getSupportFragmentManager(), null);
     }
 
-    private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setView(binding.getRoot()).create();
-        dialog.getWindow().setDimAmount(0);
-        dialog.show();
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        setBinding();
+        initView();
+        initEvent();
+        return builder().setView(binding.getRoot()).create();
+    }
+
+    private void setBinding() {
+        binding = DialogInfoBinding.inflate(getLayoutInflater());
     }
 
     private void initView() {
+        if (header == null) header = "";
+        if (title == null) title = "";
+        if (url == null) url = "";
         binding.url.setText(url);
         binding.title.setText(title);
         binding.header.setText(header);
-        binding.title.setSingleLine(title.toString().contains(url));
+        binding.title.setSingleLine(title.contains(url));
         binding.url.setVisibility(TextUtils.isEmpty(url) ? View.GONE : View.VISIBLE);
         binding.header.setVisibility(TextUtils.isEmpty(header) ? View.GONE : View.VISIBLE);
     }
@@ -75,18 +75,21 @@ public class InfoDialog {
         binding.header.setOnLongClickListener(v -> onCopy(header));
     }
 
-    private String fix(String url) {
-        return TextUtils.isEmpty(url) ? "" : url.startsWith("data") ? url.substring(0, Math.min(url.length(), 128)).concat("...") : url;
-    }
-
     private void onShare(View view) {
-        callback.onShare(title);
-        dialog.dismiss();
+        ((Listener) requireActivity()).onShare(title);
+        dismiss();
     }
 
     private boolean onCopy(String text) {
         Util.copy(text);
         return true;
+    }
+
+    private String buildHeader(Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String key : headers.keySet()) sb.append(key).append(" : ").append(headers.get(key)).append("\n");
+        return Util.substring(sb.toString());
     }
 
     public interface Listener {

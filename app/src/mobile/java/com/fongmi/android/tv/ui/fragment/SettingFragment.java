@@ -1,13 +1,9 @@
 package com.fongmi.android.tv.ui.fragment;
 
-import android.app.Activity;
-import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
@@ -38,15 +34,13 @@ import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
-import com.fongmi.android.tv.utils.FileChooser;
+import com.fongmi.android.tv.ui.dialog.ThemeDialog;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.bean.Doh;
 import com.github.catvod.net.OkHttp;
-import com.github.catvod.utils.Path;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.greenrobot.eventbus.EventBus;
@@ -60,7 +54,6 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
 
     private FragmentSettingBinding mBinding;
     private String[] size;
-    private int type;
 
     public static SettingFragment newInstance() {
         return new SettingFragment();
@@ -68,6 +61,10 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
 
     private String getSwitch(boolean value) {
         return getString(value ? R.string.setting_on : R.string.setting_off);
+    }
+
+    private String getThemeText() {
+        return getString(Setting.getThemeColor() == 0 ? R.string.setting_auto : R.string.setting_custom);
     }
 
     private int getDohIndex() {
@@ -101,6 +98,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void setOtherText() {
+        mBinding.themeColorText.setText(getThemeText());
         mBinding.dohText.setText(getDohList()[getDohIndex()]);
         mBinding.incognitoText.setText(getSwitch(Setting.isIncognito()));
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
@@ -135,6 +133,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         mBinding.wall.setOnLongClickListener(this::onWallEdit);
         mBinding.incognito.setOnClickListener(this::setIncognito);
         mBinding.vodHistory.setOnClickListener(this::onVodHistory);
+        mBinding.themeColor.setOnClickListener(this::onThemeColor);
         mBinding.liveHistory.setOnClickListener(this::onLiveHistory);
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
@@ -197,46 +196,46 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void onVod(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 0).show();
+        ConfigDialog.create().vod().show(this);
     }
 
     private void onLive(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 1).show();
+        ConfigDialog.create().live().show(this);
     }
 
     private void onWall(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 2).show();
+        ConfigDialog.create().wall().show(this);
     }
 
     private boolean onVodEdit(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 0).edit().show();
+        ConfigDialog.create().vod().edit().show(this);
         return true;
     }
 
     private boolean onLiveEdit(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 1).edit().show();
+        ConfigDialog.create().live().edit().show(this);
         return true;
     }
 
     private boolean onWallEdit(View view) {
-        ConfigDialog.create(this).launcher(launcher).type(type = 2).edit().show();
+        ConfigDialog.create().wall().edit().show(this);
         return true;
     }
 
     private void onVodHome(View view) {
-        SiteDialog.create(this).all().show();
+        SiteDialog.create().search().change().show(this);
     }
 
     private void onLiveHome(View view) {
-        LiveDialog.create(this).action().show();
+        LiveDialog.show(this);
     }
 
     private void onVodHistory(View view) {
-        HistoryDialog.create(this).type(type = 0).show();
+        HistoryDialog.create().vod().show(this);
     }
 
     private void onLiveHistory(View view) {
-        HistoryDialog.create(this).type(type = 1).show();
+        HistoryDialog.create().live().show(this);
     }
 
     private void onPlayer(View view) {
@@ -245,6 +244,10 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
 
     private void onDanmaku(View view) {
         getRoot().change(3);
+    }
+
+    private void onThemeColor(View view) {
+        ThemeDialog.show(this);
     }
 
     private void onVersion(View view) {
@@ -263,7 +266,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private boolean onWallHistory(View view) {
-        HistoryDialog.create(this).type(type = 2).show();
+        HistoryDialog.create().wall().show(this);
         return true;
     }
 
@@ -273,7 +276,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void setSize(View view) {
-        new MaterialAlertDialogBuilder(Util.wrapContext(requireActivity())).setTitle(R.string.setting_size).setNegativeButton(R.string.dialog_negative, null).setSingleChoiceItems(size, PlayerSetting.getSize(), (dialog, which) -> {
+        new MaterialAlertDialogBuilder(requireActivity()).setTitle(R.string.setting_size).setNegativeButton(R.string.dialog_negative, null).setSingleChoiceItems(size, PlayerSetting.getSize(), (dialog, which) -> {
             mBinding.sizeText.setText(size[which]);
             PlayerSetting.putSize(which);
             RefreshEvent.size();
@@ -282,7 +285,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     }
 
     private void setDoh(View view) {
-        new MaterialAlertDialogBuilder(Util.wrapContext(requireActivity())).setTitle(R.string.setting_doh).setNegativeButton(R.string.dialog_negative, null).setSingleChoiceItems(getDohList(), getDohIndex(), (dialog, which) -> {
+        new MaterialAlertDialogBuilder(requireActivity()).setTitle(R.string.setting_doh).setNegativeButton(R.string.dialog_negative, null).setSingleChoiceItems(getDohList(), getDohIndex(), (dialog, which) -> {
             setDoh(VodConfig.get().getDoh().get(which));
             dialog.dismiss();
         }).show();
@@ -358,9 +361,4 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         super.onDestroyView();
         EventBus.getDefault().unregister(this);
     }
-
-    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
-        setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
-    });
 }

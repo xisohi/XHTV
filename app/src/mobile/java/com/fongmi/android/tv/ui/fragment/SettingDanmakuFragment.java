@@ -78,7 +78,7 @@ public class SettingDanmakuFragment extends BaseFragment implements DanmakuCallb
     }
 
     private void onDanmakuApi(View view) {
-        DanmakuApiDialog.create(this).show();
+        DanmakuApiDialog.show(this);
     }
 
     @Override

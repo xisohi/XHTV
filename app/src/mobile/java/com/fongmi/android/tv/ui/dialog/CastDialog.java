@@ -54,16 +54,16 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private CastVideo video;
     private boolean fm;
 
-    public static CastDialog create() {
-        return new CastDialog();
-    }
-
     public CastDialog() {
         scanTask = new ScanTask(this);
         body = new FormBody.Builder();
         body.add("device", Device.get().toString());
         body.add("config", Config.vod().toString());
         client = OkHttp.client(Constant.TIMEOUT_SYNC);
+    }
+
+    public static CastDialog create() {
+        return new CastDialog();
     }
 
     public CastDialog history(History history) {

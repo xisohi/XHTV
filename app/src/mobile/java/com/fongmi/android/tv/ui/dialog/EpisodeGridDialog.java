@@ -30,13 +30,13 @@ public class EpisodeGridDialog extends BaseBottomSheetDialog {
     private int spanCount;
     private int itemCount;
 
-    public static EpisodeGridDialog create() {
-        return new EpisodeGridDialog();
-    }
-
     public EpisodeGridDialog() {
         this.titles = new ArrayList<>();
         this.spanCount = 5;
+    }
+
+    public static EpisodeGridDialog create() {
+        return new EpisodeGridDialog();
     }
 
     public EpisodeGridDialog reverse(boolean reverse) {
@@ -76,15 +76,12 @@ public class EpisodeGridDialog extends BaseBottomSheetDialog {
     }
 
     private void setSpanCount() {
-        int total = 0;
-        int row = ResUtil.isLand(requireActivity()) ? 5 : 10;
-        for (Episode item : episodes) total += item.getName().length();
-        int offset = (int) Math.ceil((double) total / episodes.size());
-        if (offset >= 12) spanCount = 1;
-        else if (offset >= 8) spanCount = 2;
-        else if (offset >= 4) spanCount = 3;
-        else if (offset >= 2) spanCount = 4;
-        itemCount = spanCount * row;
+        int avg = (int) Math.ceil(episodes.stream().mapToInt(e -> e.getName().length()).average().orElse(0));
+        if (avg >= 12) spanCount = 1;
+        else if (avg >= 8) spanCount = 2;
+        else if (avg >= 4) spanCount = 3;
+        else if (avg >= 2) spanCount = 4;
+        itemCount = spanCount * (ResUtil.isLand(requireActivity()) ? 5 : 10);
     }
 
     private void setTitles() {

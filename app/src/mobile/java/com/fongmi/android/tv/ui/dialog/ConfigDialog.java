@@ -1,14 +1,18 @@
 package com.fongmi.android.tv.ui.dialog;
 
+import android.app.Activity;
+import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.appcompat.app.AlertDialog;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.fongmi.android.tv.R;
@@ -20,55 +24,55 @@ import com.fongmi.android.tv.databinding.DialogConfigBinding;
 import com.fongmi.android.tv.impl.ConfigCallback;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.FileChooser;
-import com.fongmi.android.tv.utils.Util;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.github.catvod.utils.Path;
 
-public class ConfigDialog {
+public class ConfigDialog extends BaseAlertDialog {
 
-    private ActivityResultLauncher<Intent> launcher;
-    private final DialogConfigBinding binding;
-    private final ConfigCallback callback;
-    private AlertDialog dialog;
-    private boolean append;
+    private DialogConfigBinding binding;
+    private boolean append = true;
     private boolean edit;
     private String ori;
     private int type;
 
-    public static ConfigDialog create(Fragment fragment) {
-        return new ConfigDialog(fragment);
+    public static ConfigDialog create() {
+        return new ConfigDialog();
     }
 
-    public ConfigDialog type(int type) {
-        this.type = type;
+    public ConfigDialog vod() {
+        type = 0;
+        return this;
+    }
+
+    public ConfigDialog live() {
+        type = 1;
+        return this;
+    }
+
+    public ConfigDialog wall() {
+        type = 2;
         return this;
     }
 
     public ConfigDialog edit() {
-        this.edit = true;
+        edit = true;
         return this;
     }
 
-    public ConfigDialog launcher(ActivityResultLauncher<Intent> launcher) {
-        this.launcher = launcher;
-        return this;
+    public void show(Fragment fragment) {
+        show(fragment.getChildFragmentManager(), null);
     }
 
-    public ConfigDialog(Fragment fragment) {
-        this.callback = (ConfigCallback) fragment;
-        this.binding = DialogConfigBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
-        this.append = true;
-    }
-
-    public void show() {
-        initDialog();
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        setBinding();
         initView();
         initEvent();
+        return builder().setTitle(type == 0 ? R.string.setting_vod : type == 1 ? R.string.setting_live : R.string.setting_wall).setView(binding.getRoot()).setPositiveButton(edit ? R.string.dialog_edit : R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, null).create();
     }
 
-    private void initDialog() {
-        dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(type == 0 ? R.string.setting_vod : type == 1 ? R.string.setting_live : R.string.setting_wall).setView(binding.getRoot()).setPositiveButton(edit ? R.string.dialog_edit : R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
-        dialog.getWindow().setDimAmount(0);
-        dialog.show();
+    private void setBinding() {
+        binding = DialogConfigBinding.inflate(getLayoutInflater());
     }
 
     private void initView() {
@@ -87,27 +91,22 @@ public class ConfigDialog {
             }
         });
         binding.url.setOnEditorActionListener((textView, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_DONE) dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
+            if (actionId == EditorInfo.IME_ACTION_DONE) onPositive(null, 0);
             return true;
         });
     }
 
     private Config getConfig() {
-        switch (type) {
-            case 0:
-                return VodConfig.get().getConfig();
-            case 1:
-                return LiveConfig.get().getConfig();
-            case 2:
-                return WallConfig.get().getConfig();
-            default:
-                return null;
-        }
+        return switch (type) {
+            case 0 -> VodConfig.get().getConfig();
+            case 1 -> LiveConfig.get().getConfig();
+            case 2 -> WallConfig.get().getConfig();
+            default -> null;
+        };
     }
 
     private void onChoose(View view) {
         FileChooser.from(launcher).show();
-        dialog.dismiss();
     }
 
     private void detect(String s) {
@@ -132,11 +131,13 @@ public class ConfigDialog {
         String name = binding.name.getText().toString().trim();
         if (edit) Config.find(ori, type).url(url).name(name).update();
         if (url.isEmpty()) Config.delete(ori, type);
-        callback.setConfig(Config.find(url, type));
-        dialog.dismiss();
+        ((ConfigCallback) requireParentFragment()).setConfig(Config.find(url, type));
+        dismiss();
     }
 
-    private void onNegative(DialogInterface dialog, int which) {
-        dialog.dismiss();
-    }
+    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
+        ((ConfigCallback) requireParentFragment()).setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
+        dismiss();
+    });
 }

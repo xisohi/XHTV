@@ -1,42 +1,37 @@
 package com.fongmi.android.tv.ui.dialog;
 
+import android.app.Dialog;
 import android.content.DialogInterface;
-import android.view.LayoutInflater;
+import android.os.Bundle;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogSpeedBinding;
 import com.fongmi.android.tv.impl.SpeedCallback;
 import com.fongmi.android.tv.setting.PlayerSetting;
-import com.fongmi.android.tv.utils.Util;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-public class SpeedDialog {
+public class SpeedDialog extends BaseAlertDialog {
 
-    private final DialogSpeedBinding binding;
-    private final SpeedCallback callback;
+    private DialogSpeedBinding binding;
     private float value;
 
-    public static SpeedDialog create(Fragment fragment) {
-        return new SpeedDialog(fragment);
+    public static void show(Fragment fragment) {
+        new SpeedDialog().show(fragment.getChildFragmentManager(), null);
     }
 
-    public SpeedDialog(Fragment fragment) {
-        this.callback = (SpeedCallback) fragment;
-        this.binding = DialogSpeedBinding.inflate(LayoutInflater.from(Util.wrapContext(fragment.getContext())));
-    }
-
-    public void show() {
-        initDialog();
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        setBinding();
         initView();
+        return builder().setTitle(R.string.player_speed).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
     }
 
-    private void initDialog() {
-        AlertDialog dialog = new MaterialAlertDialogBuilder(Util.wrapContext(binding.getRoot().getContext())).setTitle(R.string.player_speed).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
-        dialog.getWindow().setDimAmount(0);
-        dialog.show();
+    private void setBinding() {
+        binding = DialogSpeedBinding.inflate(getLayoutInflater());
     }
 
     private void initView() {
@@ -44,12 +39,10 @@ public class SpeedDialog {
     }
 
     private void onPositive(DialogInterface dialog, int which) {
-        callback.setSpeed(binding.slider.getValue());
-        dialog.dismiss();
+        ((SpeedCallback) requireParentFragment()).setSpeed(binding.slider.getValue());
     }
 
     private void onNegative(DialogInterface dialog, int which) {
-        callback.setSpeed(value);
-        dialog.dismiss();
+        ((SpeedCallback) requireParentFragment()).setSpeed(value);
     }
 }

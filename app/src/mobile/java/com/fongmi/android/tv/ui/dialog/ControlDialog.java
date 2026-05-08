@@ -30,21 +30,21 @@ import java.util.List;
 
 public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter.OnClickListener {
 
+    private final String[] scale;
     private DialogControlBinding binding;
     private ActivityVideoBinding parent;
     private List<TextView> scales;
     private PlayerManager player;
-    private final String[] scale;
     private Listener listener;
     private History history;
     private boolean parse;
 
-    public static ControlDialog create() {
-        return new ControlDialog();
-    }
-
     public ControlDialog() {
         this.scale = ResUtil.getStringArray(R.array.select_scale);
+    }
+
+    public static ControlDialog create() {
+        return new ControlDialog();
     }
 
     public ControlDialog parent(ActivityVideoBinding parent) {

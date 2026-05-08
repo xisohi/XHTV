@@ -53,15 +53,15 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private ScanTask scanTask;
     private String type;
 
-    public static SyncDialog create() {
-        return new SyncDialog();
-    }
-
     public SyncDialog() {
         body = new FormBody.Builder();
         scanTask = new ScanTask(this);
         client = OkHttp.client(Constant.TIMEOUT_SYNC);
         mode = ResUtil.getTypedArray(R.array.cast_mode);
+    }
+
+    public static SyncDialog create() {
+        return new SyncDialog();
     }
 
     public SyncDialog history() {
