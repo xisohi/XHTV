@@ -107,4 +107,12 @@ public class Setting {
     public static void putZhuyin(boolean zhuyin) {
         Prefers.put("zhuyin", zhuyin);
     }
+
+    public static int getThemeColor() {
+        return Prefers.getInt("theme_color", 0);
+    }
+
+    public static void putThemeColor(int color) {
+        Prefers.put("theme_color", color);
+    }
 }

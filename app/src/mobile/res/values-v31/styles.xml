@@ -1,0 +1,5 @@
+<resources>
+
+    <style name="Widget.App.Fab" parent="Widget.Material3.FloatingActionButton.Primary" />
+
+</resources>

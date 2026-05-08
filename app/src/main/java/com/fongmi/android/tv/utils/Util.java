@@ -22,8 +22,6 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.github.catvod.utils.Shell;
-import com.google.android.material.color.DynamicColors;
-
 import java.net.NetworkInterface;
 import java.util.Formatter;
 import java.util.Locale;
@@ -33,10 +31,6 @@ import java.util.regex.Pattern;
 public class Util {
 
     private static final Pattern EPISODE = Pattern.compile("(?i)(?:ep|第|e|[\\-\\.\\s])\\s?(\\d{1,4})");
-
-    public static Context wrapContext(Context context) {
-        return DynamicColors.wrapContextIfAvailable(context);
-    }
 
     public static void toggleFullscreen(Activity activity, boolean fullscreen) {
         if (fullscreen) hideSystemUI(activity);
