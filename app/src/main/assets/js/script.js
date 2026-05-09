@@ -280,9 +280,9 @@ window.addEventListener('popstate', function () {
 });
 
 $(function () {
-    $('#keyword').on('keydown', function (e) { if (e.key === 'Enter') search(); });
-    $('#push_url').on('keydown', function (e) { if (e.key === 'Enter') push(); });
-    $('#danmaku_text').on('keydown', function (e) { if (e.key === 'Enter') sendDanmaku(); });
-    $('#setting_name, #setting_text').on('keydown', function (e) { if (e.key === 'Enter') setting(); });
-    $('#newFolderContent').on('keydown', function (e) { if (e.key === 'Enter') confirmNewFolder(1); });
+    $('#keyword').on('keydown', function (e) { if (e.key === 'Enter') { this.blur(); search(); } });
+    $('#push_url').on('keydown', function (e) { if (e.key === 'Enter') { this.blur(); push(); } });
+    $('#danmaku_text').on('keydown', function (e) { if (e.key === 'Enter') { this.blur(); sendDanmaku(); } });
+    $('#setting_name, #setting_text').on('keydown', function (e) { if (e.key === 'Enter') { this.blur(); setting(); } });
+    $('#newFolderContent').on('keydown', function (e) { if (e.key === 'Enter') { this.blur(); confirmNewFolder(1); } });
 });
