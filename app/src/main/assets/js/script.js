@@ -278,3 +278,11 @@ window.addEventListener('popstate', function () {
     if (visible.length) { visible.first().hide(); return; }
     listFile(currentParent);
 });
+
+$(function () {
+    $('#keyword').on('keydown', function (e) { if (e.key === 'Enter') search(); });
+    $('#push_url').on('keydown', function (e) { if (e.key === 'Enter') push(); });
+    $('#danmaku_text').on('keydown', function (e) { if (e.key === 'Enter') sendDanmaku(); });
+    $('#setting_name, #setting_text').on('keydown', function (e) { if (e.key === 'Enter') setting(); });
+    $('#newFolderContent').on('keydown', function (e) { if (e.key === 'Enter') confirmNewFolder(1); });
+});
