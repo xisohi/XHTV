@@ -122,10 +122,9 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     private void getDevice() {
         adapter.setItems(Device.getAll(), () -> {
-            adapter.sort(DLNACastManager.get().getRegistered());
+            adapter.sort(DLNACastManager.get().getRegistered(), this::setRecyclerVisible);
             if (adapter.getItemCount() == 0) onRefresh();
             else DLNACastManager.get().search();
-            setRecyclerVisible();
         });
     }
 
@@ -137,9 +136,8 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         adapter.clear(() -> {
             Device.delete();
             if (fm) scanTask.start();
-            adapter.sort(DLNACastManager.get().getRegistered());
             DLNACastManager.get().search();
-            setRecyclerVisible();
+            adapter.sort(DLNACastManager.get().getRegistered(), this::setRecyclerVisible);
         });
     }
 
