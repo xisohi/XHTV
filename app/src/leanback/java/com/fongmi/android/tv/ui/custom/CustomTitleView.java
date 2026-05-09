@@ -14,7 +14,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Site;
-import com.fongmi.android.tv.impl.SiteCallback;
+import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 
@@ -88,7 +88,7 @@ public class CustomTitleView extends AppCompatTextView {
         return VodConfig.get().getSites().stream().filter(site -> !site.isHide()).toList();
     }
 
-    public interface Listener extends SiteCallback {
+    public interface Listener extends SiteListener {
 
         void showDialog();
 

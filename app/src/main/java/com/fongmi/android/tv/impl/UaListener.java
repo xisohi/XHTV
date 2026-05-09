@@ -1,6 +1,6 @@
 package com.fongmi.android.tv.impl;
 
-public interface UaCallback {
+public interface UaListener {
 
     void setUa(String ua);
 }

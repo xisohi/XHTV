@@ -35,7 +35,6 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
     private ActivityVideoBinding parent;
     private List<TextView> scales;
     private PlayerManager player;
-    private Listener listener;
     private History history;
     private boolean parse;
 
@@ -70,7 +69,6 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
     public ControlDialog show(FragmentActivity activity) {
         for (Fragment f : activity.getSupportFragmentManager().getFragments()) if (f instanceof ControlDialog) return this;
         show(activity.getSupportFragmentManager(), null);
-        this.listener = (Listener) activity;
         return this;
     }
 
@@ -142,7 +140,7 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
 
     private void setScale(View view) {
         for (TextView textView : scales) textView.setActivated(false);
-        listener.onScale(Integer.parseInt(view.getTag().toString()));
+        ((Listener) requireActivity()).onScale(Integer.parseInt(view.getTag().toString()));
         view.setActivated(true);
     }
 
@@ -192,7 +190,7 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
 
     @Override
     public void onItemClick(Parse item) {
-        listener.onParse(item);
+        ((Listener) requireActivity()).onParse(item);
         binding.parse.getAdapter().notifyItemRangeChanged(0, binding.parse.getAdapter().getItemCount());
     }
 

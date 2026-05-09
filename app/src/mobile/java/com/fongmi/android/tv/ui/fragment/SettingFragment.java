@@ -22,9 +22,9 @@ import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
-import com.fongmi.android.tv.impl.ConfigCallback;
-import com.fongmi.android.tv.impl.LiveCallback;
-import com.fongmi.android.tv.impl.SiteCallback;
+import com.fongmi.android.tv.impl.ConfigListener;
+import com.fongmi.android.tv.impl.LiveListener;
+import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
@@ -50,7 +50,7 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SettingFragment extends BaseFragment implements ConfigCallback, SiteCallback, LiveCallback {
+public class SettingFragment extends BaseFragment implements ConfigListener, SiteListener, LiveListener, ThemeDialog.Listener {
 
     private FragmentSettingBinding mBinding;
     private String[] size;
@@ -193,6 +193,13 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
     @Override
     public void setLive(Live item) {
         LiveConfig.get().setHome(item);
+    }
+
+    @Override
+    public void setTheme(int color) {
+        Setting.putThemeColor(color);
+        requireActivity().recreate();
+        getRoot().change(0);
     }
 
     private void onVod(View view) {

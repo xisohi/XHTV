@@ -1,6 +1,6 @@
 package com.fongmi.android.tv.impl;
 
-public interface DanmakuCallback {
+public interface DanmakuListener {
 
     void setDanmakuApi(String url);
 }

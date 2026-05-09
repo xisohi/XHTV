@@ -638,7 +638,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
 
     private void onContent() {
         if (mBinding.content.getTag() == null) return;
-        ContentDialog.show(this, mBinding.content.getTag().toString());
+        ContentDialog.create().content(mBinding.content.getTag().toString()).show(this);
     }
 
     private void onKeep() {

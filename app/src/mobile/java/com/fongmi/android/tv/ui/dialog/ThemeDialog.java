@@ -1,16 +1,13 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
-import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogThemeBinding;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.ThemeAdapter;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class ThemeDialog extends BaseAlertDialog implements ThemeAdapter.OnClickListener {
 
@@ -21,27 +18,30 @@ public class ThemeDialog extends BaseAlertDialog implements ThemeAdapter.OnClick
         new ThemeDialog().show(fragment.getChildFragmentManager(), null);
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        return builder().setTitle(R.string.setting_theme_color).setView(binding.getRoot()).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogThemeBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogThemeBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setTitle(R.string.setting_theme_color).setView(getBinding().getRoot());
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         binding.recycler.setAdapter(new ThemeAdapter(this, COLORS, Setting.getThemeColor()));
     }
 
     @Override
     public void onItemClick(int color) {
-        Setting.putThemeColor(color);
-        requireActivity().recreate();
+        ((Listener) requireParentFragment()).setTheme(color);
         dismiss();
+    }
+
+    public interface Listener {
+
+        void setTheme(int color);
     }
 }
 

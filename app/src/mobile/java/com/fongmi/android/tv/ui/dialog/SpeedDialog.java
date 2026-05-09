@@ -1,17 +1,15 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
 import android.content.DialogInterface;
-import android.os.Bundle;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogSpeedBinding;
-import com.fongmi.android.tv.impl.SpeedCallback;
+import com.fongmi.android.tv.impl.SpeedListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SpeedDialog extends BaseAlertDialog {
 
@@ -22,27 +20,26 @@ public class SpeedDialog extends BaseAlertDialog {
         new SpeedDialog().show(fragment.getChildFragmentManager(), null);
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        return builder().setTitle(R.string.player_speed).setView(binding.getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogSpeedBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogSpeedBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setTitle(R.string.player_speed).setView(getBinding().getRoot()).setPositiveButton(R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, this::onNegative);
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         binding.slider.setValue(value = PlayerSetting.getSpeed());
     }
 
     private void onPositive(DialogInterface dialog, int which) {
-        ((SpeedCallback) requireParentFragment()).setSpeed(binding.slider.getValue());
+        ((SpeedListener) requireParentFragment()).setSpeed(binding.slider.getValue());
     }
 
     private void onNegative(DialogInterface dialog, int which) {
-        ((SpeedCallback) requireParentFragment()).setSpeed(value);
+        ((SpeedListener) requireParentFragment()).setSpeed(value);
     }
 }

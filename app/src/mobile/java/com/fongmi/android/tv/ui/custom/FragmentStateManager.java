@@ -18,6 +18,7 @@ public abstract class FragmentStateManager {
     public FragmentStateManager(ViewGroup container, FragmentManager fm) {
         this.container = container;
         this.fm = fm;
+        change(0);
     }
 
     public abstract Fragment getItem(int position);

@@ -1,16 +1,14 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.databinding.DialogInfoBinding;
 import com.fongmi.android.tv.utils.Util;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Map;
 
@@ -44,20 +42,18 @@ public class InfoDialog extends BaseAlertDialog {
         show(activity.getSupportFragmentManager(), null);
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        initEvent();
-        return builder().setView(binding.getRoot()).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogInfoBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogInfoBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setView(getBinding().getRoot());
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         if (header == null) header = "";
         if (title == null) title = "";
         if (url == null) url = "";
@@ -69,7 +65,8 @@ public class InfoDialog extends BaseAlertDialog {
         binding.header.setVisibility(TextUtils.isEmpty(header) ? View.GONE : View.VISIBLE);
     }
 
-    private void initEvent() {
+    @Override
+    protected void initEvent() {
         binding.url.setOnClickListener(this::onShare);
         binding.url.setOnLongClickListener(v -> onCopy(url));
         binding.header.setOnLongClickListener(v -> onCopy(header));

@@ -1,26 +1,25 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.databinding.DialogLiveBinding;
-import com.fongmi.android.tv.impl.LiveCallback;
+import com.fongmi.android.tv.impl.LiveListener;
 import com.fongmi.android.tv.ui.adapter.LiveAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class LiveDialog extends BaseAlertDialog implements LiveAdapter.OnClickListener {
 
     private DialogLiveBinding binding;
-    private LiveCallback callback;
+    private LiveListener listener;
     private LiveAdapter adapter;
 
     public static void show(FragmentActivity activity) {
@@ -38,22 +37,21 @@ public class LiveDialog extends BaseAlertDialog implements LiveAdapter.OnClickLi
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        callback = isFull() ? (LiveCallback) context : (LiveCallback) getParentFragment();
+        listener = isFull() ? (LiveListener) context : (LiveListener) getParentFragment();
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        return builder().setView(binding.getRoot()).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogLiveBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogLiveBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setView(getBinding().getRoot());
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         adapter = new LiveAdapter(this);
         adapter.setAction(!isFull());
         binding.recycler.setAdapter(adapter);
@@ -65,18 +63,8 @@ public class LiveDialog extends BaseAlertDialog implements LiveAdapter.OnClickLi
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        if (adapter.getItemCount() == 0) {
-            dismiss();
-        } else if (isFull() && ResUtil.isLand(requireContext())) {
-            getDialog().getWindow().getAttributes().width = (int) (ResUtil.getScreenWidth() * 0.5f);
-        }
-    }
-
-    @Override
     public void onItemClick(Live item) {
-        callback.setLive(item);
+        listener.setLive(item);
         dismiss();
     }
 
@@ -106,5 +94,12 @@ public class LiveDialog extends BaseAlertDialog implements LiveAdapter.OnClickLi
         LiveConfig.get().getLives().forEach(live -> live.pass(result).save());
         adapter.notifyItemRangeChanged(0, adapter.getItemCount());
         return true;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (adapter.getItemCount() == 0) dismiss();
+        else if (ResUtil.isLand(requireContext())) setWidth(0.5f);
     }
 }

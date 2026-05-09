@@ -50,7 +50,6 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private DialogDeviceBinding binding;
     private DeviceAdapter adapter;
     private ScanTask scanTask;
-    private Listener listener;
     private CastVideo video;
     private boolean fm;
 
@@ -89,7 +88,6 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     public void show(FragmentActivity activity) {
         for (Fragment f : activity.getSupportFragmentManager().getFragments()) if (f instanceof CastDialog) return;
         show(activity.getSupportFragmentManager(), null);
-        this.listener = (Listener) activity;
     }
 
     @Override
@@ -146,7 +144,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     }
 
     private void onCasted() {
-        listener.onCasted();
+        ((CastDialog.Listener) requireActivity()).onCasted();
         dismiss();
     }
 

@@ -39,10 +39,10 @@ import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.databinding.ActivityLiveBinding;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.Callback;
-import com.fongmi.android.tv.impl.ConfigCallback;
+import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.CustomTarget;
-import com.fongmi.android.tv.impl.LiveCallback;
-import com.fongmi.android.tv.impl.PassCallback;
+import com.fongmi.android.tv.impl.LiveListener;
+import com.fongmi.android.tv.impl.PassListener;
 import com.fongmi.android.tv.model.LiveViewModel;
 import com.fongmi.android.tv.player.PlayerHelper;
 import com.fongmi.android.tv.player.PlayerManager;
@@ -74,7 +74,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CustomKeyDownLive.Listener, CustomLiveListView.Callback, TrackDialog.Listener, PassCallback, ConfigCallback, LiveCallback {
+public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnClickListener, ChannelAdapter.OnClickListener, EpgDataAdapter.OnClickListener, CustomKeyDownLive.Listener, CustomLiveListView.Callback, TrackDialog.Listener, PassListener, ConfigListener, LiveListener {
 
     private ActivityLiveBinding mBinding;
     private ChannelAdapter mChannelAdapter;
@@ -365,7 +365,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void onHome() {
         if (LiveConfig.isOnly()) setLive(getHome());
-        else LiveDialog.create(this).show();
+        else LiveDialog.create().show(this);
         hideControl();
     }
 
@@ -397,7 +397,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void onConfig() {
-        HistoryDialog.create(this).readOnly().type(1).show();
+        HistoryDialog.create().live().readOnly().show(this);
         hideControl();
     }
 

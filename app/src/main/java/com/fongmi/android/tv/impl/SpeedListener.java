@@ -1,6 +1,6 @@
 package com.fongmi.android.tv.impl;
 
-public interface SpeedCallback {
+public interface SpeedListener {
 
     void setSpeed(float speed);
 }

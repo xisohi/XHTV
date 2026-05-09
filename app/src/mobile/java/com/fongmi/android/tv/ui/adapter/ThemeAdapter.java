@@ -8,7 +8,10 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.databinding.AdapterThemeBinding;
+import com.google.android.material.color.DynamicColors;
+import com.google.android.material.color.MaterialColors;
 
 public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> {
 
@@ -23,6 +26,7 @@ public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> 
     }
 
     public interface OnClickListener {
+
         void onItemClick(int color);
     }
 
@@ -45,17 +49,20 @@ public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         int color = mItems[position];
+        holder.binding.circle.setBackground(getCircle(color));
+        holder.binding.getRoot().setOnClickListener(v -> listener.onItemClick(color));
+        holder.binding.check.setVisibility(selected == color ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    private GradientDrawable getCircle(int color) {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
-        if (color == 0) {
-            circle.setColors(new int[]{0xFFE53935, 0xFF2196F3, 0xFF4CAF50, 0xFFE53935});
-            circle.setGradientType(GradientDrawable.SWEEP_GRADIENT);
-        } else {
-            circle.setColor(color);
-        }
-        holder.binding.circle.setBackground(circle);
-        holder.binding.check.setVisibility(selected == color ? View.VISIBLE : View.INVISIBLE);
-        holder.binding.getRoot().setOnClickListener(v -> listener.onItemClick(color));
+        circle.setColor(color == 0 ? getPrimaryColor() : color);
+        return circle;
+    }
+
+    private int getPrimaryColor() {
+        return MaterialColors.getColor(DynamicColors.wrapContextIfAvailable(App.get()), android.R.attr.colorPrimary, 0xFF6750A4);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

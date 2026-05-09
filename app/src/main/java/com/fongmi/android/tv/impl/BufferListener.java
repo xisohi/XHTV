@@ -1,6 +1,6 @@
 package com.fongmi.android.tv.impl;
 
-public interface BufferCallback {
+public interface BufferListener {
 
     void setBuffer(int times);
 }

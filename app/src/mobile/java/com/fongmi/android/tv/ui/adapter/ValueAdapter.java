@@ -9,17 +9,17 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.fongmi.android.tv.bean.Filter;
 import com.fongmi.android.tv.bean.Value;
 import com.fongmi.android.tv.databinding.AdapterValueBinding;
-import com.fongmi.android.tv.impl.FilterCallback;
+import com.fongmi.android.tv.impl.FilterListener;
 
 import java.util.List;
 
 public class ValueAdapter extends RecyclerView.Adapter<ValueAdapter.ViewHolder> {
 
-    private final FilterCallback listener;
+    private final FilterListener listener;
     private final List<Value> mItems;
     private final String mKey;
 
-    public ValueAdapter(FilterCallback listener, Filter filter) {
+    public ValueAdapter(FilterListener listener, Filter filter) {
         this.listener = listener;
         this.mItems = filter.getValue();
         this.mKey = filter.getKey();

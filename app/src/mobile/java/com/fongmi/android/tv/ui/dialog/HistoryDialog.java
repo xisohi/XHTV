@@ -1,25 +1,24 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.DialogHistoryBinding;
-import com.fongmi.android.tv.impl.ConfigCallback;
+import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.ui.adapter.ConfigAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class HistoryDialog extends BaseAlertDialog implements ConfigAdapter.OnClickListener {
 
     private DialogHistoryBinding binding;
-    private ConfigCallback callback;
+    private ConfigListener listener;
     private ConfigAdapter adapter;
 
     private int type;
@@ -64,22 +63,21 @@ public class HistoryDialog extends BaseAlertDialog implements ConfigAdapter.OnCl
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        callback = isFull() ? (ConfigCallback) context : (ConfigCallback) getParentFragment();
+        listener = isFull() ? (ConfigListener) context : (ConfigListener) getParentFragment();
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        return builder().setView(binding.getRoot()).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogHistoryBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogHistoryBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setView(getBinding().getRoot());
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         adapter = new ConfigAdapter(this);
         binding.recycler.setItemAnimator(null);
         binding.recycler.setHasFixedSize(false);
@@ -89,23 +87,20 @@ public class HistoryDialog extends BaseAlertDialog implements ConfigAdapter.OnCl
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        if (adapter.getItemCount() == 0) {
-            dismiss();
-        } else if (isFull() && ResUtil.isLand(requireContext())) {
-            getDialog().getWindow().getAttributes().width = (int) (ResUtil.getScreenWidth() * 0.5f);
-        }
-    }
-
-    @Override
     public void onTextClick(Config item) {
-        callback.setConfig(item);
+        listener.setConfig(item);
         dismiss();
     }
 
     @Override
     public void onDeleteClick(Config item) {
         if (adapter.remove(item) == 0) dismiss();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (adapter.getItemCount() == 0) dismiss();
+        else if (ResUtil.isLand(requireContext())) setWidth(0.5f);
     }
 }

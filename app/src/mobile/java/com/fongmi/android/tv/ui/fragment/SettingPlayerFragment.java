@@ -12,9 +12,9 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.FragmentSettingPlayerBinding;
-import com.fongmi.android.tv.impl.BufferCallback;
-import com.fongmi.android.tv.impl.SpeedCallback;
-import com.fongmi.android.tv.impl.UaCallback;
+import com.fongmi.android.tv.impl.BufferListener;
+import com.fongmi.android.tv.impl.SpeedListener;
+import com.fongmi.android.tv.impl.UaListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseFragment;
@@ -26,7 +26,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.DecimalFormat;
 
-public class SettingPlayerFragment extends BaseFragment implements UaCallback, BufferCallback, SpeedCallback {
+public class SettingPlayerFragment extends BaseFragment implements UaListener, BufferListener, SpeedListener {
 
     private FragmentSettingPlayerBinding mBinding;
     private DecimalFormat format;

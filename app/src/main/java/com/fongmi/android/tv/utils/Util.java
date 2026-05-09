@@ -22,6 +22,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.github.catvod.utils.Shell;
+
 import java.net.NetworkInterface;
 import java.util.Formatter;
 import java.util.Locale;

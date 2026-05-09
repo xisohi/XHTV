@@ -1,19 +1,16 @@
 package com.fongmi.android.tv.ui.dialog;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.LiveConfig;
@@ -21,10 +18,11 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.DialogConfigBinding;
-import com.fongmi.android.tv.impl.ConfigCallback;
+import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.utils.FileChooser;
 import com.github.catvod.utils.Path;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class ConfigDialog extends BaseAlertDialog {
 
@@ -62,27 +60,26 @@ public class ConfigDialog extends BaseAlertDialog {
         show(fragment.getChildFragmentManager(), null);
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        initEvent();
-        return builder().setTitle(type == 0 ? R.string.setting_vod : type == 1 ? R.string.setting_live : R.string.setting_wall).setView(binding.getRoot()).setPositiveButton(edit ? R.string.dialog_edit : R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, null).create();
+    protected ViewBinding getBinding() {
+        return binding = DialogConfigBinding.inflate(getLayoutInflater());
     }
 
-    private void setBinding() {
-        binding = DialogConfigBinding.inflate(getLayoutInflater());
+    @Override
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setTitle(type == 0 ? R.string.setting_vod : type == 1 ? R.string.setting_live : R.string.setting_wall).setView(getBinding().getRoot()).setPositiveButton(edit ? R.string.dialog_edit : R.string.dialog_positive, this::onPositive).setNegativeButton(R.string.dialog_negative, null);
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
         binding.name.setText(getConfig().getName());
         binding.url.setText(ori = getConfig().getUrl());
         binding.input.setVisibility(edit ? View.VISIBLE : View.GONE);
         binding.url.setSelection(TextUtils.isEmpty(ori) ? 0 : ori.length());
     }
 
-    private void initEvent() {
+    @Override
+    protected void initEvent() {
         binding.choose.setEndIconOnClickListener(this::onChoose);
         binding.url.addTextChangedListener(new CustomTextListener() {
             @Override
@@ -131,13 +128,13 @@ public class ConfigDialog extends BaseAlertDialog {
         String name = binding.name.getText().toString().trim();
         if (edit) Config.find(ori, type).url(url).name(name).update();
         if (url.isEmpty()) Config.delete(ori, type);
-        ((ConfigCallback) requireParentFragment()).setConfig(Config.find(url, type));
+        ((ConfigListener) requireParentFragment()).setConfig(Config.find(url, type));
         dismiss();
     }
 
     private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
-        ((ConfigCallback) requireParentFragment()).setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
+        ((ConfigListener) requireParentFragment()).setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
         dismiss();
     });
 }

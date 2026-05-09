@@ -1,24 +1,21 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
-import android.content.Context;
-import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.DialogSiteBinding;
-import com.fongmi.android.tv.impl.SiteCallback;
+import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.ui.adapter.SiteAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
+import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickListener {
 
     private DialogSiteBinding binding;
-    private SiteCallback callback;
+    private SiteListener listener;
     private SiteAdapter adapter;
     private boolean search;
     private boolean change;
@@ -39,46 +36,33 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
 
     public void show(Fragment fragment) {
         show(fragment.getChildFragmentManager(), null);
+        if (fragment instanceof SiteListener) listener = (SiteListener) fragment;
     }
 
     @Override
-    public void onAttach(@NonNull Context context) {
-        super.onAttach(context);
-        if (getParentFragment() instanceof SiteCallback) callback = (SiteCallback) getParentFragment();
+    protected ViewBinding getBinding() {
+        return binding = DialogSiteBinding.inflate(getLayoutInflater());
     }
 
-    @NonNull
     @Override
-    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        setBinding();
-        initView();
-        return builder().setView(binding.getRoot()).create();
+    protected MaterialAlertDialogBuilder getBuilder() {
+        return builder().setView(getBinding().getRoot());
     }
 
-    private void setBinding() {
-        binding = DialogSiteBinding.inflate(getLayoutInflater());
-    }
-
-    private void initView() {
+    @Override
+    protected void initView() {
         adapter = new SiteAdapter(this);
         binding.recycler.setAdapter(adapter);
+        adapter.search(search).change(change);
         binding.recycler.setItemAnimator(null);
         binding.recycler.setHasFixedSize(true);
-        adapter.search(search);
-        adapter.change(change);
         binding.recycler.addItemDecoration(new SpaceItemDecoration(1, 8));
         binding.recycler.post(() -> binding.recycler.scrollToPosition(VodConfig.getHomeIndex()));
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        if (adapter.getItemCount() == 0) dismiss();
-    }
-
-    @Override
     public void onTextClick(Site item) {
-        if (callback != null) callback.setSite(item);
+        if (listener != null) listener.setSite(item);
         dismiss();
     }
 
@@ -108,5 +92,12 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         adapter.getItems().forEach(site -> site.setChangeable(result).save());
         adapter.notifyItemRangeChanged(0, adapter.getItemCount());
         return true;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (adapter.getItemCount() == 0) dismiss();
+        else if (ResUtil.isLand(requireContext())) setWidth(0.5f);
     }
 }
