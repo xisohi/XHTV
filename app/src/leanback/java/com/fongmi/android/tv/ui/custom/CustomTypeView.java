@@ -7,12 +7,12 @@ import android.view.KeyEvent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatTextView;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.utils.KeyUtil;
+import com.google.android.material.textview.MaterialTextView;
 
-public class CustomTypeView extends AppCompatTextView {
+public class CustomTypeView extends MaterialTextView {
 
     private Listener listener;
     private boolean coolDown;
