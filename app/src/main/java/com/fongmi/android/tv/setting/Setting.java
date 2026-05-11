@@ -115,4 +115,17 @@ public class Setting {
     public static void putThemeColor(int color) {
         Prefers.put("theme_color", color);
     }
+
+    public static int getWallColor() {
+        return Prefers.getInt("wall_color", 0);
+    }
+
+    public static void putWallColor(int color) {
+        Prefers.put("wall_color", color);
+    }
+
+    public static int getDynamicColor() {
+        int color = getThemeColor();
+        return color == 0 ? getWallColor() : color;
+    }
 }

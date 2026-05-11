@@ -107,6 +107,7 @@ dependencies {
     implementation libs.appcompat
     implementation libs.lifecycle.service
     implementation libs.media
+    implementation libs.palette
     implementation libs.recyclerview
     implementation libs.room.runtime
     implementation libs.splashscreen
@@ -129,7 +130,6 @@ dependencies {
     implementation libs.textdrawable
     leanbackImplementation libs.leanback
     leanbackImplementation libs.androidautosize
-    mobileImplementation libs.palette
     mobileImplementation libs.biometric
     mobileImplementation libs.zxing.android.embedded
     annotationProcessor libs.room.compiler

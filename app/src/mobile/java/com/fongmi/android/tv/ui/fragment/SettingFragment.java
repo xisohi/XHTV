@@ -198,8 +198,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     @Override
     public void setTheme(int color) {
         Setting.putThemeColor(color);
-        requireActivity().recreate();
-        getRoot().change(0);
+        RefreshEvent.theme();
     }
 
     private void onVod(View view) {
