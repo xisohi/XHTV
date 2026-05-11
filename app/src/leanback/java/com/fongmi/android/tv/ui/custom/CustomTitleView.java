@@ -8,7 +8,6 @@ import android.view.animation.Animation;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatTextView;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
@@ -17,10 +16,11 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.textview.MaterialTextView;
 
 import java.util.List;
 
-public class CustomTitleView extends AppCompatTextView {
+public class CustomTitleView extends MaterialTextView {
 
     private Listener listener;
     private Animation flicker;

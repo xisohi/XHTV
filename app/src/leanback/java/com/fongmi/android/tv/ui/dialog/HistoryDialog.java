@@ -1,8 +1,5 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.app.Dialog;
-import android.view.WindowManager;
-
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewbinding.ViewBinding;
 
@@ -11,7 +8,6 @@ import com.fongmi.android.tv.databinding.DialogHistoryBinding;
 import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.ui.adapter.ConfigAdapter;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
-import com.fongmi.android.tv.utils.ResUtil;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class HistoryDialog extends BaseAlertDialog implements ConfigAdapter.OnClickListener {
