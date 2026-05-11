@@ -17,8 +17,8 @@
     <style name="Theme.App" parent="Theme.Base" />
 
     <style name="Theme.Crash" parent="Theme.Base">
+        <item name="android:windowBackground">@color/grey_800</item>
         <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowBackground">@color/grey_700</item>
     </style>
 
     <style name="NoAnim">
