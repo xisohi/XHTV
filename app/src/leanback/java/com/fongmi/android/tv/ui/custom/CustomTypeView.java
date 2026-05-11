@@ -35,7 +35,7 @@ public class CustomTypeView extends MaterialTextView {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (hasEvent(event)) return onKeyDown();
+        if (listener != null && hasEvent(event)) return onKeyDown();
         else return super.dispatchKeyEvent(event);
     }
 
