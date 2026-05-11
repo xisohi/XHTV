@@ -10,12 +10,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.databinding.AdapterThemeBinding;
 import com.fongmi.android.tv.setting.Setting;
+import com.github.bassaer.library.MDColor;
 
 public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> {
 
     private final OnClickListener listener;
-    private final int[] mItems;
     private final int selected;
+    private final int[] mItems;
 
     public ThemeAdapter(OnClickListener listener, int[] items, int selected) {
         this.listener = listener;
@@ -42,15 +43,18 @@ public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         int color = mItems[position];
+        holder.binding.circle.setBackground(getCircle(color));
         holder.binding.getRoot().setOnClickListener(v -> listener.onItemClick(color));
         holder.binding.check.setVisibility(selected == color ? View.VISIBLE : View.INVISIBLE);
-        holder.binding.circle.setBackground(getCircle(color == 0 ? Setting.getWallColor() : color));
+        holder.binding.close.setVisibility(selected != color && color == -1 ? View.VISIBLE : View.GONE);
     }
 
     private GradientDrawable getCircle(int color) {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(color);
+        if (color == 0) circle.setColor(Setting.getWallColor());
+        else if (color == -1) circle.setColor(MDColor.GREY_500);
+        else circle.setColor(color);
         return circle;
     }
 

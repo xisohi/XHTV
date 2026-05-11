@@ -109,7 +109,8 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     private void enableDynamicColor() {
-        DynamicColors.applyToActivityIfAvailable(this, new DynamicColorsOptions.Builder().setContentBasedSource(Setting.getDynamicColor()).build());
+        int color = Setting.getDynamicColor();
+        if (color != 0) DynamicColors.applyToActivityIfAvailable(this, new DynamicColorsOptions.Builder().setContentBasedSource(color).build());
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

@@ -109,7 +109,7 @@ public class Setting {
     }
 
     public static int getThemeColor() {
-        return Prefers.getInt("theme_color", 0);
+        return Prefers.getInt("theme_color", -1);
     }
 
     public static void putThemeColor(int color) {
@@ -126,6 +126,7 @@ public class Setting {
 
     public static int getDynamicColor() {
         int color = getThemeColor();
-        return color == 0 ? getWallColor() : color;
+        if (color == -1) return 0;
+        return color != 0 ? color : getWallColor();
     }
 }
