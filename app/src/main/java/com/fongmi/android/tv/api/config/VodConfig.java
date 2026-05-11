@@ -19,7 +19,6 @@ import com.github.catvod.bean.Header;
 import com.github.catvod.bean.Proxy;
 import com.github.catvod.utils.Json;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -113,7 +112,7 @@ public class VodConfig extends BaseConfig {
     @Override
     protected void load(Config config) throws Throwable {
         String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
-        checkJson(config, JsonParser.parseString(json).getAsJsonObject());
+        checkJson(config, Json.parse(json).getAsJsonObject());
     }
 
     @Override
