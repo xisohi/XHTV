@@ -5,11 +5,12 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
-        <item name="android:windowAnimationStyle">@style/NoAnim</item>D
+        <item name="android:windowAnimationStyle">@style/NoAnim</item>
     </style>
 
     <style name="Theme.Splash" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.App</item>
+        <item name="windowSplashScreenBackground">#141218</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
 
