@@ -1,7 +1,6 @@
 <resources>
 
     <style name="Theme.Base" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/blue_500</item>
         <item name="android:statusBarColor">@color/transparent</item>
         <item name="android:navigationBarColor">@color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
@@ -17,11 +16,6 @@
     <style name="Theme.Crash" parent="Theme.Base">
         <item name="android:windowDisablePreview">true</item>
         <item name="android:windowBackground">@color/grey_700</item>
-    </style>
-
-    <style name="Widget.App.Fab" parent="Widget.Material3.FloatingActionButton.Primary">
-        <item name="backgroundTint">@color/blue_500</item>
-        <item name="tint">@color/white</item>
     </style>
 
     <style name="Control">

@@ -98,7 +98,10 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
     }
 
     private void theme() {
-        Setting.putWallColor(getWallColor());
+        int newColor = getWallColor();
+        int oldColor = Setting.getWallColor();
+        if (newColor == oldColor) return;
+        Setting.putWallColor(newColor);
         if (Setting.getThemeColor() == 0) RefreshEvent.theme();
     }
 
