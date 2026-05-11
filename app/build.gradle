@@ -1,12 +1,12 @@
 plugins {
     alias libs.plugins.android.application
 }
-
+/*
 def localProps = new Properties()
 rootProject.file('local.properties').withInputStream {
     localProps.load(it)
 }
-
+*/
 android {
     namespace = 'com.fongmi.android.tv'
 
@@ -48,7 +48,7 @@ android {
         buildConfig = true
         viewBinding = true
     }
-
+/*
     signingConfigs {
         release {
             storeFile file(localProps['storeFile'])
@@ -57,12 +57,12 @@ android {
             storePassword localProps['storePassword']
         }
     }
-
+*/
     buildTypes {
         release {
             minifyEnabled = true
             shrinkResources = true
-            signingConfig = signingConfigs.release
+//            signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
         }
     }
@@ -135,4 +135,34 @@ dependencies {
     annotationProcessor libs.eventbus.annotation.processor
     annotationProcessor libs.glide.compiler
     coreLibraryDesugaring libs.desugar
-}
+    // 使用 media 模块（core_settings.gradle 已经定义好这些路径）
+    implementation project(':media-lib-common')
+    implementation project(':media-lib-container')
+    implementation project(':media-lib-database')
+    implementation project(':media-lib-datasource')
+    implementation project(':media-lib-datasource-okhttp')
+    implementation project(':media-lib-decoder')
+    implementation project(':media-lib-decoder-av1')
+    implementation project(':media-lib-decoder-ffmpeg')
+    implementation project(':media-lib-decoder-flac')
+    implementation project(':media-lib-decoder-iamf')
+    implementation project(':media-lib-decoder-mpegh')
+    implementation project(':media-lib-decoder-opus')
+    implementation project(':media-lib-decoder-vp9')
+    implementation project(':media-lib-effect')
+    implementation project(':media-lib-exoplayer')
+    implementation project(':media-lib-exoplayer-dash')
+    implementation project(':media-lib-exoplayer-hls')
+    implementation project(':media-lib-exoplayer-ima')
+    implementation project(':media-lib-exoplayer-rtsp')
+    implementation project(':media-lib-exoplayer-smoothstreaming')
+    implementation project(':media-lib-exoplayer-workmanager')
+    implementation project(':media-lib-extractor')
+    implementation project(':media-lib-inspector')
+    implementation project(':media-lib-muxer')
+    implementation project(':media-lib-session')
+    implementation project(':media-lib-ui')
+    leanbackImplementation project(':media-lib-ui-leanback')
+    implementation('io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0') {
+        exclude group: 'androidx.media3'}
+    }
