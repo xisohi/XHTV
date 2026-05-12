@@ -145,7 +145,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     @Override
     public void setConfig(Config config) {
         if (config.getUrl().startsWith("file")) {
-            PermissionUtil.requestFile(this, allGranted -> load(config));
+            requireView().post(() -> PermissionUtil.requestFile(this, allGranted -> load(config)));
         } else {
             load(config);
         }
