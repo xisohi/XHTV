@@ -270,10 +270,10 @@ public class LiveConfig extends BaseConfig {
 
     private void setHome(Config config, Live live, boolean save) {
         home = live;
-        home.setActivated(true);
+        home.setSelected(true);
         config.setHome(home.getName());
         if (save) config.save();
-        getLives().forEach(item -> item.setActivated(home));
+        getLives().forEach(item -> item.setSelected(home));
         if (!save && (home.isBoot() || LiveSetting.isBoot())) ConfigEvent.boot();
     }
 
