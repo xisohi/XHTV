@@ -486,6 +486,7 @@ public class VideoActivity extends PlaybackActivity implements CustomKeyDownVod.
     }
 
     private void setPlayer(Result result) {
+        if (isFinishing() || isDestroyed()) return;
         mQualityAdapter.addAll(result);
         setUseParse(result.shouldUseParse());
         setQualityVisible(result.getUrl().isMulti());
