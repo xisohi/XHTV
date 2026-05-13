@@ -173,7 +173,7 @@ public class LiveConfig extends BaseConfig {
     }
 
     public void parse(JsonObject object) {
-        parseConfig(getConfig(), object);
+        initLive(getConfig(), object);
     }
 
     private void initList(JsonObject object) {

@@ -14,7 +14,6 @@ public class ProxyAuthenticator extends Authenticator {
 
     @Override
     protected PasswordAuthentication getPasswordAuthentication() {
-        if (getRequestorType() != RequestorType.PROXY) return null;
         String userInfo = findUserInfo(getRequestingHost());
         if (userInfo == null || !userInfo.contains(":")) return null;
         int index = userInfo.indexOf(':');
