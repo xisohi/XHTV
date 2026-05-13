@@ -7,7 +7,7 @@
         android:topLeftRadius="8dp"
         android:topRightRadius="8dp" />
 
-    <solid android:color="?attr/colorTertiaryContainer" />
+    <solid android:color="?attr/colorErrorContainer" />
 
     <padding
         android:bottom="4dp"
