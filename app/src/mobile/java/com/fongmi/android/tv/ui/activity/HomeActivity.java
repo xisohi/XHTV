@@ -108,14 +108,14 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     }
 
     private void initFragment(Bundle savedInstanceState) {
-        if (savedInstanceState == null) mBinding.container.postDelayed(() -> change(0), 100);
-        mManager = new FragmentStateManager(mBinding.container, getSupportFragmentManager(), position -> {
-            if (position == 0) return VodFragment.newInstance();
-            if (position == 1) return SettingFragment.newInstance();
-            if (position == 2) return SettingPlayerFragment.newInstance();
-            if (position == 3) return SettingDanmakuFragment.newInstance();
-            return null;
+        mManager = new FragmentStateManager(mBinding.container, getSupportFragmentManager(), position -> switch (position) {
+            case 0 -> VodFragment.newInstance();
+            case 1 -> SettingFragment.newInstance();
+            case 2 -> SettingPlayerFragment.newInstance();
+            case 3 -> SettingDanmakuFragment.newInstance();
+            default -> null;
         });
+        if (savedInstanceState == null) change(0);
     }
 
     private void initConfig() {

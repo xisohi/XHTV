@@ -14,8 +14,8 @@ import java.util.function.IntFunction;
 
 public class FragmentStateManager {
 
-    private final FragmentManager fm;
     private final ViewGroup container;
+    private final FragmentManager fm;
     private final IntFunction<Fragment> factory;
 
     public FragmentStateManager(ViewGroup container, FragmentManager fm, IntFunction<Fragment> factory) {
