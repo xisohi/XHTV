@@ -67,3 +67,7 @@
 
 # Zxing
 -keep class com.google.zxing.** { *; }
+
+# 忽略 Cling 相关警告
+-dontwarn org.fourthline.cling.**
+-dontwarn org.eclipse.jetty.**
