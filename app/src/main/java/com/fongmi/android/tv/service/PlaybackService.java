@@ -179,7 +179,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     private void stopAndClear() {
         player.stop();
-        exoPlayer.clearMediaItems();
+        player.clearMediaItems();
     }
 
     public void suspend() {
@@ -217,7 +217,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     private void saveProgress() {
         if (hasNavigationCallback() || session == null) return;
-        if (BrowseTree.saveProgress(exoPlayer.getCurrentPosition(), exoPlayer.getDuration())) {
+        if (BrowseTree.saveProgress(player.getPosition(), player.getDuration())) {
             session.notifyChildrenChanged("VOD", 0, null);
         }
     }
@@ -304,20 +304,20 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void dispatchStop() {
-        if (exoPlayer.getPlaybackState() == Player.STATE_IDLE) return;
+        if (player.getPlaybackState() == Player.STATE_IDLE) return;
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(NavigationCallback::onStop);
         else stopAndClear();
     }
 
     public void dispatchRepeat() {
-        exoPlayer.setRepeatMode(exoPlayer.getRepeatMode() == Player.REPEAT_MODE_ONE ? Player.REPEAT_MODE_OFF : Player.REPEAT_MODE_ONE);
+        player.setRepeatOne(!player.isRepeatOne());
     }
 
     public void dispatchReplay() {
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(NavigationCallback::onReplay);
         else {
-            exoPlayer.seekTo(0);
-            exoPlayer.play();
+            player.seekTo(0);
+            player.play();
         }
     }
 
@@ -331,7 +331,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void navigateItem(int delta) {
-        MediaItem current = exoPlayer.getCurrentMediaItem();
+        MediaItem current = player.getCurrentMediaItem();
         if (current == null) return;
         Task.submit(() -> {
             try {
@@ -339,7 +339,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
                 if (next == null || next.localConfiguration == null) return;
                 Result result = BrowseTree.consumeBrowseResult(next.mediaId);
                 if (result == null || !isRunning()) return;
-                App.post(() -> startBrowse(player, next, result, 0));
+                App.post(() -> startBrowse(next, result, 0));
             } catch (Exception ignored) {
             }
         });
@@ -418,16 +418,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
                 dispatchStop();
             }
 
-            @Override
-            public void setRepeatMode(int repeatMode) {
-                exoPlayer.setRepeatMode(repeatMode);
-            }
-
-            @Override
-            public int getRepeatMode() {
-                return exoPlayer.getRepeatMode();
-            }
-
             @NonNull
             @Override
             public Commands getAvailableCommands() {
@@ -439,12 +429,12 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private void playViaManager(MediaItem item, long startPositionMs) {
         if (item == null || item.localConfiguration == null) return;
         Result result = BrowseTree.consumeBrowseResult(item.mediaId);
-        if (result != null) startBrowse(player, item, result, startPositionMs);
+        if (result != null) startBrowse(item, result, startPositionMs);
     }
 
-    private void startBrowse(PlayerManager manager, MediaItem item, Result result, long startPositionMs) {
-        manager.browse(PlaySpec.from(result, item.mediaId, item.mediaMetadata));
-        if (startPositionMs > 0) manager.seekTo(startPositionMs);
+    private void startBrowse(MediaItem item, Result result, long startPositionMs) {
+        player.browse(PlaySpec.from(result, item.mediaId, item.mediaMetadata));
+        if (startPositionMs > 0) player.seekTo(startPositionMs);
     }
 
     @Override
