@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+    dependencies {
+        // 版本号必须和 media 目录使用的 Kotlin 版本保持一致
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.0.20"
+    }
+}
 plugins {
     alias libs.plugins.android.application apply false
     alias libs.plugins.android.library apply false
