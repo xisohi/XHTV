@@ -14,7 +14,6 @@ import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.splashscreen.SplashScreen;
-import androidx.fragment.app.Fragment;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
@@ -78,7 +77,8 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     protected void initView(Bundle savedInstanceState) {
         orientation = getResources().getConfiguration().orientation;
         mBinding.navigation.setOnItemSelectedListener(this);
-        initFragment(savedInstanceState == null);
+        PermissionUtil.requestNotify(this);
+        initFragment(savedInstanceState);
         Updater.create().start(this);
         initConfig();
     }
@@ -107,18 +107,15 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         }
     }
 
-    private void initFragment(boolean init) {
-        mManager = new FragmentStateManager(mBinding.container, getSupportFragmentManager()) {
-            @Override
-            public Fragment getItem(int position) {
-                if (position == 0) return VodFragment.newInstance();
-                if (position == 1) return SettingFragment.newInstance();
-                if (position == 2) return SettingPlayerFragment.newInstance();
-                if (position == 3) return SettingDanmakuFragment.newInstance();
-                return null;
-            }
-        };
-        if (init) change(0);
+    private void initFragment(Bundle savedInstanceState) {
+        if (savedInstanceState == null) mBinding.container.postDelayed(() -> change(0), 100);
+        mManager = new FragmentStateManager(mBinding.container, getSupportFragmentManager(), position -> {
+            if (position == 0) return VodFragment.newInstance();
+            if (position == 1) return SettingFragment.newInstance();
+            if (position == 2) return SettingPlayerFragment.newInstance();
+            if (position == 3) return SettingDanmakuFragment.newInstance();
+            return null;
+        });
     }
 
     private void initConfig() {
