@@ -77,14 +77,14 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     @Override
     protected void initView(Bundle savedInstanceState) {
         orientation = getResources().getConfiguration().orientation;
+        mBinding.navigation.setOnItemSelectedListener(this);
+        initFragment(savedInstanceState == null);
         Updater.create().start(this);
-        initFragment();
         initConfig();
     }
 
     @Override
     protected void initEvent() {
-        mBinding.navigation.setOnItemSelectedListener(this);
         mBinding.navigation.findViewById(R.id.live).setOnLongClickListener(this::addShortcut);
     }
 
@@ -107,7 +107,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         }
     }
 
-    private void initFragment() {
+    private void initFragment(boolean init) {
         mManager = new FragmentStateManager(mBinding.container, getSupportFragmentManager()) {
             @Override
             public Fragment getItem(int position) {
@@ -118,6 +118,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
                 return null;
             }
         };
+        if (init) change(0);
     }
 
     private void initConfig() {
@@ -187,6 +188,11 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
                 LiveActivity.start(this);
                 break;
         }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onRefreshEvent(RefreshEvent event) {
+        if (event.getType() == RefreshEvent.Type.THEME) recreate();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

@@ -14,10 +14,10 @@ import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.bean.Header;
 import com.github.catvod.bean.Proxy;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Json;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -128,7 +128,7 @@ abstract class BaseConfig {
 
     private JsonArray fetch(String url) {
         try {
-            JsonElement parsed = JsonParser.parseString(OkHttp.string(UrlUtil.convert(url)));
+            JsonElement parsed = Json.parse(OkHttp.string(UrlUtil.convert(url)));
             return parsed.isJsonArray() ? parsed.getAsJsonArray() : new JsonArray();
         } catch (Exception e) {
             return new JsonArray();

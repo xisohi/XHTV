@@ -17,4 +17,12 @@
         android:layout_gravity="center"
         android:src="@drawable/ic_action_check" />
 
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/close"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_action_close"
+        android:visibility="gone" />
+
 </FrameLayout>

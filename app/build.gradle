@@ -27,8 +27,8 @@ android {
         applicationId "com.xisohi.android.xhtv"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
-        versionCode 547
-        versionName "5.4.7"
+        versionCode 549
+        versionName "5.4.9"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -126,6 +126,7 @@ dependencies {
     implementation libs.appcompat
     implementation libs.lifecycle.service
     implementation libs.media
+    implementation libs.palette
     implementation libs.recyclerview
     implementation libs.room.runtime
     implementation libs.splashscreen
@@ -148,7 +149,6 @@ dependencies {
     implementation libs.textdrawable
     leanbackImplementation libs.leanback
     leanbackImplementation libs.androidautosize
-    mobileImplementation libs.palette
     mobileImplementation libs.biometric
     mobileImplementation libs.zxing.android.embedded
     annotationProcessor libs.room.compiler

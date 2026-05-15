@@ -64,7 +64,9 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     }
 
     private String getThemeText() {
-        return getString(Setting.getThemeColor() == 0 ? R.string.setting_auto : R.string.setting_custom);
+        int color = Setting.getThemeColor();
+        if (color == -1) return getString(R.string.setting_off);
+        return getString(color == 0 ? R.string.setting_auto : R.string.setting_custom);
     }
 
     private int getDohIndex() {
@@ -143,7 +145,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     @Override
     public void setConfig(Config config) {
         if (config.getUrl().startsWith("file")) {
-            PermissionUtil.requestFile(this, allGranted -> load(config));
+            requireView().post(() -> PermissionUtil.requestFile(this, allGranted -> load(config)));
         } else {
             load(config);
         }
@@ -198,8 +200,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     @Override
     public void setTheme(int color) {
         Setting.putThemeColor(color);
-        requireActivity().recreate();
-        getRoot().change(0);
+        RefreshEvent.theme();
     }
 
     private void onVod(View view) {
