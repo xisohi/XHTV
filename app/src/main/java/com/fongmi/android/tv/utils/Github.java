@@ -53,7 +53,7 @@ public class Github {
      * @return 带代理加速的完整APK URL
      */
     public static String getApk(String name) {
-        String githubUrl = "https://github.com/xisohi/XHYSosc/releases/download/lkys/" + name + ".apk";
+        String githubUrl = "https://github.com/xisohi/XHYSosc/releases/download/fongmi/" + name + ".apk";
         return getAcceleratedUrl(githubUrl);
     }
 
