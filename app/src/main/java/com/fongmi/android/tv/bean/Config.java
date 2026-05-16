@@ -214,6 +214,8 @@ public class Config {
         return danmaku;
     }
 
+    public static final String BUILTIN_VOD_URL = "https://xhys.xisohi.dpdns.org/ysy.json";
+
     public void setDanmaku(String danmaku) {
         this.danmaku = danmaku;
     }
@@ -243,6 +245,10 @@ public class Config {
     }
 
     public String getDesc() {
+        // 点播、直播、壁纸类型统一显示“内置源”
+        if (type == 0 || type == 1 || type == 2) {
+            return "内置源";
+        }
         if (!TextUtils.isEmpty(getName())) return getName();
         if (!TextUtils.isEmpty(getUrl())) return getUrl();
         return "";
