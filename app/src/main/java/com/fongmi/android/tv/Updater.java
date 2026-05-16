@@ -1,5 +1,9 @@
 package com.fongmi.android.tv;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 
@@ -183,9 +187,39 @@ public class Updater implements Download.Callback, UpdateListener {
 
     @Override
     public void success(File file) {
-        Log.i(TAG, "下载成功，开始安装");
+        // 1. 基础信息日志
+        Log.i(TAG, "========== 下载成功 ==========");
+        Log.i(TAG, "文件路径: " + file.getAbsolutePath());
+        Log.i(TAG, "文件大小: " + file.length() + " bytes (" + (file.length() / 1024) + " KB)");
+        Log.i(TAG, "文件是否存在: " + file.exists());
+        Log.i(TAG, "文件可读: " + file.canRead());
+
+        // 2. Android 版本和权限状态
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            boolean canInstall = App.get().getPackageManager().canRequestPackageInstalls();
+            Log.i(TAG, "Android版本: " + Build.VERSION.SDK_INT);
+            Log.i(TAG, "是否拥有安装未知应用权限: " + canInstall);
+            if (!canInstall) {
+                Log.w(TAG, "未授权安装未知应用，将跳转设置页面");
+                Notify.show("需要授权安装未知应用才能自动更新");
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                intent.setData(Uri.parse("package:" + App.get().getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                App.get().startActivity(intent);
+                isDownloading = false;
+                return;
+            }
+        }
+
+        // 3. 调用安装前的日志
+        Log.i(TAG, "权限检查通过，开始调用 FileUtil.openFile()");
         isDownloading = false;
-        FileUtil.openFile(file);
+        try {
+            FileUtil.openFile(file);
+            Log.i(TAG, "FileUtil.openFile() 调用完成");
+        } catch (Exception e) {
+            Log.e(TAG, "FileUtil.openFile() 异常: " + Log.getStackTraceString(e));
+        }
         dismiss();
     }
 }
