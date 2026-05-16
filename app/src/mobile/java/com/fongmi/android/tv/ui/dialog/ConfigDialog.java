@@ -73,9 +73,16 @@ public class ConfigDialog extends BaseAlertDialog {
     @Override
     protected void initView() {
         binding.name.setText(getConfig().getName());
-        binding.url.setText(ori = getConfig().getUrl());
+        String realUrl = getConfig().getUrl();
+        ori = realUrl;  // 保存真实 URL，用于后续判断
+
+        // 判断是否为内置源（点播类型且 URL 等于内置地址）
+        boolean isBuiltin = (type == 0 && Config.BUILTIN_URL.equals(realUrl));
+        // 编辑模式下，内置源显示“内置源”，否则显示真实 URL
+        String displayUrl = (edit && isBuiltin) ? Config.BUILTIN_NAME : realUrl;
+        binding.url.setText(displayUrl);
         binding.input.setVisibility(edit ? View.VISIBLE : View.GONE);
-        binding.url.setSelection(TextUtils.isEmpty(ori) ? 0 : ori.length());
+        binding.url.setSelection(TextUtils.isEmpty(displayUrl) ? 0 : displayUrl.length());
     }
 
     @Override
@@ -124,11 +131,21 @@ public class ConfigDialog extends BaseAlertDialog {
     }
 
     private void onPositive(DialogInterface dialog, int which) {
-        String url = binding.url.getText().toString().trim();
+        String urlText = binding.url.getText().toString().trim();
         String name = binding.name.getText().toString().trim();
-        if (edit) Config.find(ori, type).url(url).name(name).update();
-        if (url.isEmpty()) Config.delete(ori, type);
-        ((ConfigListener) requireParentFragment()).setConfig(Config.find(url, type));
+
+        String finalUrl;
+        boolean isBuiltin = (type == 0 && Config.BUILTIN_URL.equals(ori));
+        // 如果原始是内置源且用户输入的是“内置源”，则保存真实内置 URL
+        if (edit && isBuiltin && Config.BUILTIN_NAME.equals(urlText)) {
+            finalUrl = ori;
+        } else {
+            finalUrl = urlText;
+        }
+
+        if (edit) Config.find(ori, type).url(finalUrl).name(name).update();
+        if (finalUrl.isEmpty()) Config.delete(ori, type);
+        ((ConfigListener) requireParentFragment()).setConfig(Config.find(finalUrl, type));
         dismiss();
     }
 
