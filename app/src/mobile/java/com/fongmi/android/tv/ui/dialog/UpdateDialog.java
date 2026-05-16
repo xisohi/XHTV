@@ -1,5 +1,8 @@
 package com.fongmi.android.tv.ui.dialog;
 
+import android.app.Dialog;
+import android.widget.Button;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewbinding.ViewBinding;
@@ -17,6 +20,7 @@ public class UpdateDialog extends BaseAlertDialog {
     private UpdateListener listener;
     private String title;
     private String desc;
+    private boolean isDownloading = false;
 
     public static UpdateDialog create() {
         return new UpdateDialog();
@@ -38,6 +42,10 @@ public class UpdateDialog extends BaseAlertDialog {
     }
 
     public UpdateDialog show(FragmentActivity activity) {
+        // 添加 Activity 状态检查
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            return this;
+        }
         show(activity.getSupportFragmentManager(), null);
         return this;
     }
@@ -49,24 +57,118 @@ public class UpdateDialog extends BaseAlertDialog {
 
     @Override
     protected MaterialAlertDialogBuilder getBuilder() {
-        return builder().setTitle(title).setView(getBinding().getRoot()).setPositiveButton(R.string.update_confirm, null).setNegativeButton(R.string.dialog_negative, null).setCancelable(false);
+        MaterialAlertDialogBuilder builder = builder()
+                .setView(getBinding().getRoot())
+                .setPositiveButton(R.string.update_confirm, null)  // listener 设为 null，手动设置
+                .setNegativeButton(R.string.dialog_negative, null)
+                .setCancelable(false);
+
+        // 设置标题（避免 null）
+        if (title != null && !title.isEmpty()) {
+            builder.setTitle(title);
+        }
+
+        return builder;
     }
 
     @Override
     protected void initView() {
-        binding.desc.setText(desc);
+        if (binding == null) return;
+        // 设置更新内容
+        if (desc != null) {
+            binding.desc.setText(desc);
+        }
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        AlertDialog dialog = (AlertDialog) getDialog();
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(view -> listener.onCancel(view));
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> listener.onConfirm(view));
+
+        Dialog dialog = getDialog();
+        if (dialog == null || listener == null) return;
+
+        AlertDialog alertDialog = (AlertDialog) dialog;
+
+        // 获取按钮
+        Button positiveButton = alertDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        Button negativeButton = alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+
+        // 设置初始状态
+        if (positiveButton != null) {
+            positiveButton.setEnabled(true);
+            positiveButton.setText(R.string.update_confirm);
+            positiveButton.setOnClickListener(view -> {
+                if (!isDownloading && listener != null) {
+                    listener.onConfirm(view);
+                }
+            });
+        }
+
+        // 取消按钮
+        if (negativeButton != null) {
+            negativeButton.setOnClickListener(view -> {
+                if (listener != null) {
+                    listener.onCancel(view);
+                }
+            });
+        }
     }
 
+    /**
+     * 设置下载进度
+     * @param progress 0-100
+     */
     public void setProgress(int progress) {
         AlertDialog dialog = (AlertDialog) getDialog();
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(String.format(Locale.getDefault(), "%1$d%%", progress));
+        if (dialog == null) return;
+
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton == null) return;
+
+        if (progress >= 0 && progress <= 100) {
+            isDownloading = true;
+            positiveButton.setText(String.format(Locale.getDefault(), "%d%%", progress));
+            positiveButton.setEnabled(false);  // 下载中不可点击
+        }
+
+        // 下载完成，恢复按钮
+        if (progress >= 100) {
+            resetButton();
+        }
+    }
+
+    /**
+     * 重置按钮（用于重试场景）
+     */
+    public void resetButton() {
+        AlertDialog dialog = (AlertDialog) getDialog();
+        if (dialog == null) return;
+
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton == null) return;
+
+        isDownloading = false;
+        positiveButton.setText(R.string.update_confirm);
+        positiveButton.setEnabled(true);
+    }
+
+    /**
+     * 显示重试状态（可选）
+     */
+    public void setRetryStatus(int retryCount, int maxRetry) {
+        AlertDialog dialog = (AlertDialog) getDialog();
+        if (dialog == null) return;
+
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton == null || isDownloading) return;
+
+        positiveButton.setText(String.format("重试(%d/%d)", retryCount, maxRetry));
+        positiveButton.setEnabled(false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;  // 防止内存泄漏
     }
 }

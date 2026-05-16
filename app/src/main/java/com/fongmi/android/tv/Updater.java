@@ -1,5 +1,6 @@
 package com.fongmi.android.tv;
 
+import android.util.Log;
 import android.view.View;
 
 import androidx.fragment.app.FragmentActivity;
@@ -12,7 +13,6 @@ import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Github;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.Task;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 
@@ -22,11 +22,16 @@ import java.io.File;
 
 public class Updater implements Download.Callback, UpdateListener {
 
-    private final Download download;
+    private static final String TAG = "Updater";
+    private static final int MAX_RETRY_COUNT = 4;
+
+    private Download download;
     private UpdateDialog dialog;
+    private String apkName;
+    private int retryCount;
+    private boolean isDownloading = false;
 
     private Updater() {
-        this.download = Download.create(getApk(), getFile());
     }
 
     public static Updater create() {
@@ -38,11 +43,23 @@ public class Updater implements Download.Callback, UpdateListener {
     }
 
     private String getJson() {
-        return Github.getJson(BuildConfig.FLAVOR_mode);
+        String url = Github.getJson("fongmi");
+        Log.d(TAG, "JSON请求地址: " + url);
+        return url;
     }
 
     private String getApk() {
-        return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
+        apkName = BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi;
+        String url = Github.getApk(apkName);
+        Log.d(TAG, "APK下载地址: " + url);
+        return url;
+    }
+
+    private void createDownload() {
+        if (download != null) {
+            download.cancel();
+        }
+        download = Download.create(getApk(), getFile());
     }
 
     public Updater force() {
@@ -53,60 +70,121 @@ public class Updater implements Download.Callback, UpdateListener {
 
     public void start(FragmentActivity activity) {
         if (!Setting.getUpdate()) return;
-        Task.execute(() -> doInBackground(activity));
+        Log.i(TAG, "开始检查更新...");
+        App.execute(() -> doInBackground(activity));  // ✅ 使用 App.execute
     }
 
     private void doInBackground(FragmentActivity activity) {
         try {
-            JSONObject object = new JSONObject(OkHttp.string(getJson()));
+            String jsonUrl = getJson();
+            Log.i(TAG, "正在请求JSON: " + jsonUrl);
+
+            String jsonContent = OkHttp.string(jsonUrl);
+            Log.d(TAG, "JSON返回内容:\n" + jsonContent);
+
+            JSONObject object = new JSONObject(jsonContent);
             String name = object.optString("name");
             String desc = object.optString("desc");
             int code = object.optInt("code");
-            if (code <= BuildConfig.VERSION_CODE) return;
-            App.post(() -> show(activity, name, desc));
+
+            Log.d(TAG, "解析JSON - name: " + name + ", versionCode: " + code);
+
+            if (code > BuildConfig.VERSION_CODE) {
+                Log.i(TAG, "发现新版本，当前: " + BuildConfig.VERSION_CODE + ", 最新: " + code);
+                App.post(() -> show(activity, name, desc));  // ✅ 使用 App.post
+            } else {
+                Log.i(TAG, "当前已是最新版本: " + BuildConfig.VERSION_CODE);
+            }
+
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "更新检查失败: " + e.getMessage(), e);
         }
     }
 
     private void show(FragmentActivity activity, String version, String desc) {
         dismiss();
-        dialog = UpdateDialog.create().title(ResUtil.getString(R.string.update_version, version)).desc(desc).listener(this).show(activity);
+        retryCount = 0;
+        isDownloading = false;
+        dialog = UpdateDialog.create()
+                .title(ResUtil.getString(R.string.update_version, version))
+                .desc(desc)
+                .listener(this)
+                .show(activity);
     }
 
     @Override
     public void onConfirm(View view) {
+        if (isDownloading) return;
+
         view.setEnabled(false);
+        isDownloading = true;
+        retryCount = 0;
+        Github.resetProxy();
+        createDownload();
         download.start(this);
     }
 
     @Override
     public void onCancel(View view) {
         Setting.putUpdate(false);
-        download.cancel();
+        if (download != null) {
+            download.cancel();
+        }
         dismiss();
     }
 
     private void dismiss() {
         try {
-            if (dialog != null) dialog.dismiss();
+            if (dialog != null) {
+                dialog.dismiss();
+                dialog = null;
+            }
         } catch (Exception ignored) {
         }
     }
 
     @Override
     public void progress(int progress) {
-        if (dialog != null) dialog.setProgress(progress);
+        if (dialog != null && progress >= 0 && progress <= 100) {
+            dialog.setProgress(progress);
+        }
     }
 
     @Override
     public void error(String msg) {
-        Notify.show(msg);
-        dismiss();
+        Log.e(TAG, "下载失败: " + msg);
+
+        if (retryCount < MAX_RETRY_COUNT) {
+            retryCount++;
+            Log.w(TAG, String.format("第%d/%d次失败，切换代理重试...", retryCount, MAX_RETRY_COUNT));
+
+            // ✅ 使用 Notify 提示，不直接操作 dialog 内部控件
+            Notify.show("下载失败，切换服务器重试 (" + retryCount + "/" + MAX_RETRY_COUNT + ")");
+
+            Github.switchToNextProxy();
+
+            // ✅ 使用 App.post 延迟重试
+            App.post(() -> {
+                if (download != null) {
+                    String newUrl = Github.getApk(apkName);
+                    Log.i(TAG, "切换后新地址: " + newUrl);
+                    download.setUrl(newUrl).start(this);
+                }
+            }, 1500);
+
+        } else {
+            Log.e(TAG, "所有代理均失败，终止下载");
+            Notify.show("下载失败，请检查网络后重试");
+            isDownloading = false;
+            dismiss();
+            Setting.putUpdate(true);
+        }
     }
 
     @Override
     public void success(File file) {
+        Log.i(TAG, "下载成功，开始安装");
+        isDownloading = false;
         FileUtil.openFile(file);
         dismiss();
     }
