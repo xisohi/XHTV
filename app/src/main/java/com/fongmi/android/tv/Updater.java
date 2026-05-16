@@ -118,10 +118,7 @@ public class Updater implements Download.Callback, UpdateListener {
 
     @Override
     public void onConfirm(View view) {
-        if (isDownloading) return;
-
         view.setEnabled(false);
-        isDownloading = true;
         retryCount = 0;
         Github.resetProxy();
         createDownload();

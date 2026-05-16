@@ -22,6 +22,9 @@ import java.util.List;
 @Entity(indices = @Index(value = {"url", "type"}, unique = true))
 public class Config {
 
+    public static final String BUILTIN_URL = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
+    public static final String BUILTIN_NAME = "内置源";
+
     @PrimaryKey(autoGenerate = true)
     @SerializedName("id")
     private int id;
@@ -214,8 +217,6 @@ public class Config {
         return danmaku;
     }
 
-    public static final String BUILTIN_VOD_URL = "https://xhys.xisohi.dpdns.org/ysy.json";
-
     public void setDanmaku(String danmaku) {
         this.danmaku = danmaku;
     }
@@ -245,10 +246,11 @@ public class Config {
     }
 
     public String getDesc() {
-        // 点播、直播、壁纸类型统一显示“内置源”
-        if (type == 0 || type == 1 || type == 2) {
-            return "内置源";
+        // 只要 URL 等于内置源地址，就显示“内置源”
+        if (BUILTIN_URL.equals(getUrl())) {
+            return BUILTIN_NAME;
         }
+        // 其他情况：优先显示自定义名称，否则显示 URL
         if (!TextUtils.isEmpty(getName())) return getName();
         if (!TextUtils.isEmpty(getUrl())) return getUrl();
         return "";

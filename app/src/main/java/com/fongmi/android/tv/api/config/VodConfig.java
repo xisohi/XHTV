@@ -82,7 +82,7 @@ public class VodConfig extends BaseConfig {
         Config current = Config.vod();
         // 只有当当前点播配置为空（无任何配置）时，才创建并激活内置源
         if (current.isEmpty()) {
-            Config builtin = Config.find(Config.BUILTIN_VOD_URL, "内置源", VOD);
+            Config builtin = Config.find(Config.BUILTIN_URL, Config.BUILTIN_NAME, VOD);
             builtin.update();
         }
     }
