@@ -81,18 +81,13 @@ public class ConfigDialog extends BaseAlertDialog {
     protected void initView() {
         // 获取真实URL
         realUrl = getRealUrl();
-        // 判断是否为内置源（点播/直播/壁纸只要URL等于内置地址就算）
-        boolean isBuiltin = Config.BUILTIN_URL.equals(realUrl);
-        // 决定显示文本：编辑模式下内置源显示"内置源"，否则显示真实URL
-        String displayText = (edit && isBuiltin) ? Config.BUILTIN_NAME : realUrl;
+        // 决定显示文本：如果是内置源则显示"内置源"，否则显示真实URL
+        String displayText = getDisplayText(realUrl);
         binding.text.setText(displayText);
         binding.text.setSelection(TextUtils.isEmpty(displayText) ? 0 : displayText.length());
         binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
         binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(3), 200, 0));
         binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("\uff0c", "\n"));
-        // 输入框始终可编辑
-        binding.text.setFocusable(true);
-        binding.text.setFocusableInTouchMode(true);
     }
 
     @Override
@@ -121,6 +116,13 @@ public class ConfigDialog extends BaseAlertDialog {
         }
     }
 
+    private String getDisplayText(String url) {
+        if (Config.BUILTIN_URL.equals(url)) {
+            return Config.BUILTIN_NAME;
+        }
+        return url;
+    }
+
     private void onChoose(View view) {
         FileChooser.from(launcher).show();
     }
@@ -147,9 +149,8 @@ public class ConfigDialog extends BaseAlertDialog {
         String text = binding.text.getText().toString().trim();
 
         String finalUrl;
-        boolean isBuiltin = Config.BUILTIN_URL.equals(realUrl);
-        // 如果是编辑模式且原始配置是内置源，并且用户输入内容仍然是"内置源"，则保存真实内置URL
-        if (edit && isBuiltin && Config.BUILTIN_NAME.equals(text)) {
+        // 如果原始是内置源且用户输入的是"内置源"，则保存真实内置URL
+        if (Config.BUILTIN_URL.equals(realUrl) && Config.BUILTIN_NAME.equals(text)) {
             finalUrl = realUrl;
         } else {
             finalUrl = text;
