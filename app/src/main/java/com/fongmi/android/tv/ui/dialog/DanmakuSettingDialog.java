@@ -30,22 +30,21 @@ public final class DanmakuSettingDialog {
     public void show(FragmentActivity activity) {
         FragmentManager manager = activity.getSupportFragmentManager();
         for (Fragment fragment : manager.getFragments()) if (fragment instanceof BottomSheet || fragment instanceof SideSheet) return;
-        if (Util.isFullscreenLand(activity) || Util.isLeanback()) new SideSheet().player(player).show(manager, null);
-        else new BottomSheet().player(player).show(manager, null);
+        if (Util.isFullscreenLand(activity) || Util.isLeanback()) new SideSheet(player).show(manager, null);
+        else new BottomSheet(player).show(manager, null);
     }
 
     private static DialogDanmakuSettingBinding inflate(LayoutInflater inflater, ViewGroup container) {
         return DialogDanmakuSettingBinding.inflate(inflater, container, false);
     }
 
-    public static final class BottomSheet extends BaseBottomSheetDialog {
+    private static final class BottomSheet extends BaseBottomSheetDialog {
 
         private DialogDanmakuSettingBinding binding;
-        private PlayerManager player;
+        private final PlayerManager player;
 
-        BottomSheet player(PlayerManager player) {
+        BottomSheet(PlayerManager player) {
             this.player = player;
-            return this;
         }
 
         @Override
@@ -59,14 +58,13 @@ public final class DanmakuSettingDialog {
         }
     }
 
-    public static final class SideSheet extends BaseSideSheetDialog {
+    private static final class SideSheet extends BaseSideSheetDialog {
 
         private DialogDanmakuSettingBinding binding;
-        private PlayerManager player;
+        private final PlayerManager player;
 
-        SideSheet player(PlayerManager player) {
+        SideSheet(PlayerManager player) {
             this.player = player;
-            return this;
         }
 
         @Override
