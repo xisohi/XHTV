@@ -12,6 +12,7 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.databinding.DialogOffsetBinding;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 
 public final class OffsetDialog {
@@ -44,7 +45,7 @@ public final class OffsetDialog {
         return DialogOffsetBinding.inflate(inflater, container, false);
     }
 
-    private static final class BottomSheet extends BaseBottomSheetDialog {
+    public static final class BottomSheet extends BaseBottomSheetDialog {
 
         private DialogOffsetBinding binding;
         private final PlayerManager player;
@@ -66,7 +67,7 @@ public final class OffsetDialog {
         }
     }
 
-    private static final class SideSheet extends BaseSideSheetDialog {
+    public static final class SideSheet extends BaseSideSheetDialog {
 
         private DialogOffsetBinding binding;
         private final PlayerManager player;
@@ -75,6 +76,11 @@ public final class OffsetDialog {
         SideSheet(PlayerManager player, int type) {
             this.player = player;
             this.type = type;
+        }
+
+        @Override
+        protected int getWidth() {
+            return Math.min(ResUtil.dp2px(320), ResUtil.getScreenWidth() / 2);
         }
 
         @Override

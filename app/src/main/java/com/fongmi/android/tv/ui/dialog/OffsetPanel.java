@@ -1,18 +1,20 @@
 package com.fongmi.android.tv.ui.dialog;
 
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.media3.common.C;
 
 import com.fongmi.android.tv.databinding.DialogOffsetBinding;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.google.android.material.slider.Slider;
 
 import java.util.Locale;
+import java.util.function.LongConsumer;
 
 final class OffsetPanel {
 
-    private static final long OFFSET_MIN_MS = -10_000;
-    private static final long OFFSET_MAX_MS = 10_000;
     private static final long OFFSET_STEP_MS = 100;
 
     private final DialogOffsetBinding binding;
@@ -26,43 +28,44 @@ final class OffsetPanel {
     }
 
     void bind() {
-        binding.audioSection.setVisibility(type == C.TRACK_TYPE_AUDIO ? View.VISIBLE : View.GONE);
-        binding.textSection.setVisibility(type == C.TRACK_TYPE_TEXT ? View.VISIBLE : View.GONE);
-        binding.audioSlider.setLabelFormatter(v -> String.format(Locale.getDefault(), "%+.1fs", v / 1000f));
-        binding.textSlider.setLabelFormatter(v -> String.format(Locale.getDefault(), "%+.1fs", v / 1000f));
-        binding.audioSlider.setValue(clamp(player.getAudioOffsetMs()));
-        binding.textSlider.setValue(clamp(player.getTextOffsetMs()));
-        setAudioValue(binding.audioSlider.getValue());
-        setTextValue(binding.textSlider.getValue());
-        binding.audioSlider.addOnChangeListener((slider, value, fromUser) -> onAudioChange(value));
-        binding.textSlider.addOnChangeListener((slider, value, fromUser) -> onTextChange(value));
+        setupOffset(binding.audioSlider, binding.audioValue, player.getAudioOffsetMs(), player::setAudioOffsetMs);
+        setupOffset(binding.textSlider, binding.textValue, player.getTextOffsetMs(), player::setTextOffsetMs);
         binding.reset.setOnClickListener(this::onReset);
+        getSection().setVisibility(View.VISIBLE);
+        getSlider().requestFocus();
+    }
+
+    private ViewGroup getSection() {
+        return type == C.TRACK_TYPE_AUDIO ? binding.audioSection : binding.textSection;
+    }
+
+    private Slider getSlider() {
+        return type == C.TRACK_TYPE_AUDIO ? binding.audioSlider : binding.textSlider;
+    }
+
+    private TextView getLabel() {
+        return type == C.TRACK_TYPE_AUDIO ? binding.audioValue : binding.textValue;
     }
 
     private void onReset(View view) {
-        if (type == C.TRACK_TYPE_AUDIO) binding.audioSlider.setValue(0);
-        if (type == C.TRACK_TYPE_TEXT) binding.textSlider.setValue(0);
+        getSlider().setValue(0);
+        getLabel().setText(format(0));
     }
 
-    private void onAudioChange(float value) {
-        player.setAudioOffsetMs(Math.round(value / OFFSET_STEP_MS) * OFFSET_STEP_MS);
-        setAudioValue(value);
+    private void setupOffset(Slider slider, TextView label, long valueMs, LongConsumer setter) {
+        float clamped = Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), valueMs));
+        slider.clearOnChangeListeners();
+        slider.setLabelFormatter(this::format);
+        slider.setValue(clamped);
+        label.setText(format(clamped));
+        slider.addOnChangeListener((source, value, fromUser) -> {
+            if (!fromUser) return;
+            setter.accept(Math.round(value / OFFSET_STEP_MS) * OFFSET_STEP_MS);
+            label.setText(format(value));
+        });
     }
 
-    private void onTextChange(float value) {
-        player.setTextOffsetMs(Math.round(value / OFFSET_STEP_MS) * OFFSET_STEP_MS);
-        setTextValue(value);
-    }
-
-    private void setAudioValue(float value) {
-        binding.audioValue.setText(String.format(Locale.getDefault(), "%+.1fs", value / 1000f));
-    }
-
-    private void setTextValue(float value) {
-        binding.textValue.setText(String.format(Locale.getDefault(), "%+.1fs", value / 1000f));
-    }
-
-    private float clamp(long value) {
-        return Math.max(OFFSET_MIN_MS, Math.min(OFFSET_MAX_MS, value));
+    private String format(float value) {
+        return String.format(Locale.getDefault(), "%+.1fs", value / 1000f);
     }
 }

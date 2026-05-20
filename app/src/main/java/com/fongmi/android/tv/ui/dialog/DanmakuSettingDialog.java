@@ -12,6 +12,7 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.databinding.DialogDanmakuSettingBinding;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 
 public final class DanmakuSettingDialog {
@@ -38,7 +39,7 @@ public final class DanmakuSettingDialog {
         return DialogDanmakuSettingBinding.inflate(inflater, container, false);
     }
 
-    private static final class BottomSheet extends BaseBottomSheetDialog {
+    public static final class BottomSheet extends BaseBottomSheetDialog {
 
         private DialogDanmakuSettingBinding binding;
         private final PlayerManager player;
@@ -58,13 +59,18 @@ public final class DanmakuSettingDialog {
         }
     }
 
-    private static final class SideSheet extends BaseSideSheetDialog {
+    public static final class SideSheet extends BaseSideSheetDialog {
 
         private DialogDanmakuSettingBinding binding;
         private final PlayerManager player;
 
         SideSheet(PlayerManager player) {
             this.player = player;
+        }
+
+        @Override
+        protected int getWidth() {
+            return Math.min(ResUtil.dp2px(420), ResUtil.getScreenWidth() / 2);
         }
 
         @Override
