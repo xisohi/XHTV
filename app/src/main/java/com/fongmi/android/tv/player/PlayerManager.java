@@ -60,10 +60,10 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void release() {
+        player.removeListener(listener);
         App.removeCallbacks(runnable);
         releaseDanmakuController();
         if (engine == null) return;
-        player.removeListener(listener);
         engine.release();
         engine = null;
         player = null;
