@@ -13,6 +13,7 @@ import androidx.media3.ui.SubtitleView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.databinding.DialogSubtitleBinding;
+import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
@@ -22,6 +23,7 @@ public final class SubtitleDialog extends BaseBottomSheetDialog {
 
     private DialogSubtitleBinding binding;
     private SubtitleView subtitleView;
+    private PlayerManager player;
 
     public static SubtitleDialog create() {
         return new SubtitleDialog();
@@ -29,6 +31,11 @@ public final class SubtitleDialog extends BaseBottomSheetDialog {
 
     public SubtitleDialog view(SubtitleView subtitleView) {
         this.subtitleView = subtitleView;
+        return this;
+    }
+
+    public SubtitleDialog player(PlayerManager player) {
+        this.player = player;
         return this;
     }
 
@@ -69,27 +76,36 @@ public final class SubtitleDialog extends BaseBottomSheetDialog {
     private void onUp(View view) {
         subtitleView.addPosition(0.005f);
         PlayerSetting.putSubtitlePosition(subtitleView.getPosition());
+        applySubtitleStyle();
     }
 
     private void onDown(View view) {
         subtitleView.subPosition(0.005f);
         PlayerSetting.putSubtitlePosition(subtitleView.getPosition());
+        applySubtitleStyle();
     }
 
     private void onLarge(View view) {
         subtitleView.addTextSize(0.002f);
         PlayerSetting.putSubtitleTextSize(subtitleView.getTextSize());
+        applySubtitleStyle();
     }
 
     private void onSmall(View view) {
         subtitleView.subTextSize(0.002f);
         PlayerSetting.putSubtitleTextSize(subtitleView.getTextSize());
+        applySubtitleStyle();
     }
 
     private void onReset(View view) {
         PlayerSetting.putSubtitleTextSize(0.0f);
         PlayerSetting.putSubtitlePosition(0.0f);
         subtitleView.reset();
+        applySubtitleStyle();
+    }
+
+    private void applySubtitleStyle() {
+        if (player != null && !player.isReleased()) player.setSubtitleStyle();
     }
 
     @Override

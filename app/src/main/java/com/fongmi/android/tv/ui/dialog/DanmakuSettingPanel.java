@@ -224,7 +224,7 @@ final class DanmakuSettingPanel {
     }
 
     private void setupSlider(Slider slider, TextView label, float initial, Function<Float, String> formatter, Consumer<Float> setter) {
-        float clamped = Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), initial));
+        float clamped = Math.clamp(initial, slider.getValueFrom(), slider.getValueTo());
         slider.clearOnChangeListeners();
         slider.setLabelFormatter(formatter::apply);
         slider.setValue(clamped);
