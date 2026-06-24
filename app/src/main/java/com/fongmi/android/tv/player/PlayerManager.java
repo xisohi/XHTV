@@ -61,7 +61,7 @@ public class PlayerManager implements ParseCallback {
         this.callback = callback;
         this.runnable = this::onPlayTimeout;
         this.decode = PlayerEngine.HARD;
-        this.engine = PlayerEngineFactory.create(decode, null, listener);
+        this.engine = PlayerEngineFactory.create(decode, listener);
         this.player = engine.getPlayer();
         this.pendingStartPositionMs = C.TIME_UNSET;
         this.danmakuConfig = DanmakuSetting.getConfig();
