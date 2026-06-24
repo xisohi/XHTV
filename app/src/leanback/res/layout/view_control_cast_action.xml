@@ -23,7 +23,7 @@
             android:id="@+id/player"
             style="@style/Control"
             android:layout_marginEnd="12dp"
-            android:text="@string/play_exo" />
+            android:text="@string/player_engine" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/decode"

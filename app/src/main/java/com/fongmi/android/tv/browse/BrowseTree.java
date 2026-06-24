@@ -41,10 +41,12 @@ public class BrowseTree {
     }
 
     public static void clearVod() {
+        clearPending(VodBrowse.VOD_EP);
         VodBrowse.clear();
     }
 
     public static void clearLive() {
+        clearPending(LiveBrowse.LIVE_CH);
         LiveBrowse.clear();
     }
 
@@ -53,7 +55,12 @@ public class BrowseTree {
     }
 
     @NonNull
-    public static ImmutableList<MediaItem> getChildren(@NonNull String parentId) {
+    public static ImmutableList<MediaItem> getChildren(@NonNull String parentId, int page, int pageSize) {
+        return page(getChildrenInternal(parentId), page, pageSize);
+    }
+
+    @NonNull
+    private static ImmutableList<MediaItem> getChildrenInternal(@NonNull String parentId) {
         return switch (parentId) {
             case ROOT -> ImmutableList.of(VOD_FOLDER, LIVE_FOLDER);
             case VOD -> VodBrowse.getHistory();
@@ -71,10 +78,7 @@ public class BrowseTree {
             case ROOT -> ROOT_ITEM;
             case VOD -> VOD_FOLDER;
             case LIVE -> LIVE_FOLDER;
-            default -> {
-                if (mediaId.startsWith(LiveBrowse.LIVE_GROUP)) yield folder(mediaId, mediaId.substring(LiveBrowse.LIVE_GROUP.length()));
-                yield null;
-            }
+            default -> mediaId.startsWith(LiveBrowse.LIVE_GROUP) || mediaId.startsWith(LiveBrowse.LIVE_CH) ? LiveBrowse.getItem(mediaId) : VodBrowse.getItem(mediaId);
         };
     }
 
@@ -84,8 +88,8 @@ public class BrowseTree {
     }
 
     @NonNull
-    public static ImmutableList<MediaItem> getSearchResult() {
-        return VodBrowse.getSearchResult();
+    public static ImmutableList<MediaItem> getSearchResult(@NonNull String query, int page, int pageSize) {
+        return VodBrowse.getSearchResult(query, page, pageSize);
     }
 
     @Nullable
@@ -130,6 +134,19 @@ public class BrowseTree {
 
     static int wrapIndex(int current, int delta, int count) {
         return ((current + delta) % count + count) % count;
+    }
+
+    private static void clearPending(@NonNull String prefix) {
+        browseResultMap.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
+    @NonNull
+    static ImmutableList<MediaItem> page(@NonNull ImmutableList<MediaItem> items, int page, int pageSize) {
+        if (pageSize <= 0) return items;
+        long fromLong = Math.max(0, page) * (long) pageSize;
+        if (fromLong >= items.size()) return ImmutableList.of();
+        int from = (int) fromLong;
+        return ImmutableList.copyOf(items.subList(from, Math.min(items.size(), from + pageSize)));
     }
 
     static MediaItem folder(@NonNull String id, @NonNull String title) {

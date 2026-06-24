@@ -37,13 +37,15 @@ class VodBrowse {
 
     private static final int SEARCH_LIMIT = 50;
     private static final int SEARCH_TIMEOUT = 5;
+    private static final char KEY_SEPARATOR = '|';
     private static final Map<String, Vod> vodCache = new ConcurrentHashMap<>();
     private static final Map<String, String> epNavMap = new ConcurrentHashMap<>();
     private static final Map<String, EpEntry> epEntries = new ConcurrentHashMap<>();
     private static final Map<String, Integer> epCountMap = new ConcurrentHashMap<>();
+    private static final Map<String, MediaItem> searchItemMap = new ConcurrentHashMap<>();
+    private static final Map<String, ImmutableList<MediaItem>> searchCacheMap = new ConcurrentHashMap<>();
 
     private static volatile History browseHistory;
-    private static volatile ImmutableList<MediaItem> searchCache = ImmutableList.of();
 
     static void clear() {
         vodCache.clear();
@@ -51,29 +53,33 @@ class VodBrowse {
         epEntries.clear();
         epCountMap.clear();
         browseHistory = null;
-        searchCache = ImmutableList.of();
+        searchItemMap.clear();
+        searchCacheMap.clear();
     }
 
     @NonNull
     static ImmutableList<MediaItem> getHistory() {
-        return History.get().stream().map(history -> BrowseTree.playable(VOD_PLAY + history.getKey(), history.getVodName(), history.getVodRemarks(), history.getVodPic())).collect(ImmutableList.toImmutableList());
+        return History.get().stream().map(VodBrowse::historyItem).collect(ImmutableList.toImmutableList());
     }
 
     @NonNull
     static ImmutableList<MediaItem> search(@NonNull String query) {
         VodConfig.get().ensureLoaded();
-        String keyword = Trans.t2s(query);
+        String keyword = searchKey(query);
+        if (TextUtils.isEmpty(keyword)) return ImmutableList.of();
         List<Site> sites = VodConfig.get().getSites().stream().filter(Site::isSearchable).toList();
         List<ListenableFuture<List<MediaItem>>> futures = sites.stream().map(site -> Task.largeExecutor().submit(() -> searchSite(site, keyword))).toList();
         List<MediaItem> items = collectResults(futures);
         items.sort((a, b) -> matchScore(b, keyword) - matchScore(a, keyword));
-        searchCache = ImmutableList.copyOf(items.subList(0, Math.min(items.size(), SEARCH_LIMIT)));
-        return searchCache;
+        ImmutableList<MediaItem> results = ImmutableList.copyOf(items.subList(0, Math.min(items.size(), SEARCH_LIMIT)));
+        searchCacheMap.put(keyword, results);
+        results.forEach(item -> searchItemMap.put(item.mediaId, item));
+        return results;
     }
 
     private static List<MediaItem> searchSite(@NonNull Site site, @NonNull String keyword) throws Exception {
         Result result = SiteApi.searchContent(site, keyword, false, "1");
-        return result.getList().stream().map(vod -> BrowseTree.playable(VOD_SEARCH + site.getKey() + "|" + vod.getId(), vod.getName(), vod.getRemarks(), vod.getPic())).toList();
+        return result.getList().stream().map(vod -> BrowseTree.playable(searchId(site.getKey(), vod.getId()), vod.getName(), vod.getRemarks(), vod.getPic())).toList();
     }
 
     private static List<MediaItem> collectResults(@NonNull List<ListenableFuture<List<MediaItem>>> futures) {
@@ -90,8 +96,16 @@ class VodBrowse {
     }
 
     @NonNull
-    static ImmutableList<MediaItem> getSearchResult() {
-        return searchCache;
+    static ImmutableList<MediaItem> getSearchResult(@NonNull String query, int page, int pageSize) {
+        return BrowseTree.page(searchCacheMap.getOrDefault(searchKey(query), ImmutableList.of()), page, pageSize);
+    }
+
+    @Nullable
+    static MediaItem getItem(@NonNull String mediaId) {
+        if (mediaId.startsWith(VOD_EP)) return getEpisodeItem(mediaId);
+        if (mediaId.startsWith(VOD_PLAY)) return getHistoryItem(mediaId);
+        if (mediaId.startsWith(VOD_SEARCH)) return getSearchItem(mediaId);
+        return null;
     }
 
     @Nullable
@@ -137,16 +151,13 @@ class VodBrowse {
 
     @Nullable
     private static MediaItem resolveSearch(@NonNull String mediaId) throws Exception {
-        String body = mediaId.substring(VOD_SEARCH.length());
-        int sep = body.indexOf('|');
-        if (sep < 0) return null;
-        String siteKey = body.substring(0, sep);
-        String vodId = body.substring(sep + 1);
-        String historyKey = siteKey + AppDatabase.SYMBOL + vodId;
+        SearchEntry search = SearchEntry.parse(mediaId);
+        if (search == null) return null;
+        String historyKey = historyKey(search.siteKey, search.vodId);
         History existing = History.find(historyKey);
         if (existing != null) return resolveWithHistory(historyKey, existing);
         VodConfig.get().ensureLoaded();
-        Vod vod = SiteApi.detailContent(siteKey, vodId).getVod();
+        Vod vod = SiteApi.detailContent(search.siteKey, search.vodId).getVod();
         if (TextUtils.isEmpty(vod.getId()) || vod.getFlags().isEmpty()) return null;
         vodCache.put(historyKey, vod);
         History history = createHistory(historyKey, vod);
@@ -155,7 +166,9 @@ class VodBrowse {
         int currentIdx = buildEpIndex(historyKey, resumeFlag, history);
         browseHistory = history;
         String epId = epNavMap.get(epNavKey(historyKey, resumeFlag.getFlag(), currentIdx));
-        return epId != null ? resolveEp(epId) : null;
+        MediaItem item = epId != null ? resolveEp(epId) : null;
+        if (item != null) saveCreatedHistory(history);
+        return item;
     }
 
     @Nullable
@@ -192,13 +205,13 @@ class VodBrowse {
     }
 
     private static int buildEpIndex(@NonNull String historyKey, @NonNull Flag flag, @NonNull History history) {
-        String prefix = historyKey + "|";
+        String prefix = historyKey + KEY_SEPARATOR;
         epEntries.values().removeIf(entry -> entry.historyKey.equals(historyKey));
         epNavMap.keySet().removeIf(key -> key.startsWith(prefix));
         epCountMap.keySet().removeIf(key -> key.startsWith(prefix));
         String flagName = flag.getFlag();
         List<Episode> episodes = flag.getEpisodes();
-        epCountMap.put(historyKey + '|' + flagName, episodes.size());
+        epCountMap.put(epCountKey(historyKey, flagName), episodes.size());
         IntStream.range(0, episodes.size()).forEach(i -> indexEpisode(historyKey, flagName, i, history));
         return findCurrentIndex(flag, history);
     }
@@ -221,7 +234,7 @@ class VodBrowse {
     private static MediaItem navigateEpisode(@NonNull String mediaId, int delta) throws Exception {
         EpEntry current = epEntries.get(mediaId);
         if (current == null) return null;
-        Integer count = epCountMap.get(current.historyKey + '|' + current.flagName);
+        Integer count = epCountMap.get(epCountKey(current.historyKey, current.flagName));
         if (count == null || count == 0) return null;
         int target = BrowseTree.wrapIndex(current.index, delta, count);
         String nextId = epNavMap.get(epNavKey(current.historyKey, current.flagName, target));
@@ -243,15 +256,48 @@ class VodBrowse {
         if (TextUtils.isEmpty(result.getRealUrl())) return null;
         updateHistory(episode);
         BrowseTree.putBrowseResult(mediaId, result);
-        String vodName = vod.getName();
-        if (TextUtils.isEmpty(vodName) && browseHistory != null) vodName = browseHistory.getVodName();
-        return BrowseTree.stream(mediaId, result.getRealUrl(), vodName, episode.getName(), entry.vodPic);
+        return BrowseTree.stream(mediaId, result.getRealUrl(), vodName(vod), episode.getName(), entry.vodPic);
     }
 
     private static void updateHistory(@NonNull Episode episode) {
         if (browseHistory == null) return;
         browseHistory.setVodRemarks(episode.getName());
         browseHistory.setEpisodeUrl(episode.getUrl());
+    }
+
+    private static void saveCreatedHistory(@NonNull History history) {
+        if (Setting.isIncognito()) return;
+        long position = history.getPosition();
+        long duration = history.getDuration();
+        history.setCreateTime(System.currentTimeMillis());
+        history.setPosition(duration > 0 ? Math.max(0, position) : 0);
+        history.setDuration(Math.max(0, duration));
+        history.save();
+        history.setPosition(position);
+        history.setDuration(duration);
+    }
+
+    @Nullable
+    private static MediaItem getHistoryItem(@NonNull String mediaId) {
+        History history = History.find(mediaId.substring(VOD_PLAY.length()));
+        return history == null ? null : historyItem(history);
+    }
+
+    @Nullable
+    private static MediaItem getSearchItem(@NonNull String mediaId) {
+        return searchItemMap.get(mediaId);
+    }
+
+    @Nullable
+    private static MediaItem getEpisodeItem(@NonNull String mediaId) {
+        EpEntry entry = epEntries.get(mediaId);
+        if (entry == null) return null;
+        Vod vod = vodCache.get(entry.historyKey);
+        if (vod == null) return null;
+        Flag flag = findFlag(vod, entry.flagName);
+        if (flag == null || entry.index >= flag.getEpisodes().size()) return null;
+        Episode episode = flag.getEpisodes().get(entry.index);
+        return BrowseTree.playable(mediaId, vodName(vod), episode.getName(), entry.vodPic);
     }
 
     @Nullable
@@ -296,8 +342,51 @@ class VodBrowse {
     }
 
     @NonNull
+    private static String searchKey(@NonNull String query) {
+        return Trans.t2s(query).trim();
+    }
+
+    @NonNull
+    private static String historyKey(@NonNull String siteKey, @NonNull String vodId) {
+        return siteKey + AppDatabase.SYMBOL + vodId + AppDatabase.SYMBOL + VodConfig.getCid();
+    }
+
+    @NonNull
     private static String epNavKey(@NonNull String historyKey, @NonNull String flagName, int index) {
-        return historyKey + '|' + flagName + '|' + index;
+        return epCountKey(historyKey, flagName) + KEY_SEPARATOR + index;
+    }
+
+    @NonNull
+    private static String epCountKey(@NonNull String historyKey, @NonNull String flagName) {
+        return historyKey + KEY_SEPARATOR + flagName;
+    }
+
+    @NonNull
+    private static String searchId(@NonNull String siteKey, @NonNull String vodId) {
+        return VOD_SEARCH + siteKey + KEY_SEPARATOR + vodId;
+    }
+
+    @NonNull
+    private static MediaItem historyItem(@NonNull History history) {
+        return BrowseTree.playable(VOD_PLAY + history.getKey(), history.getVodName(), history.getVodRemarks(), history.getVodPic());
+    }
+
+    @NonNull
+    private static String vodName(@NonNull Vod vod) {
+        if (!TextUtils.isEmpty(vod.getName())) return vod.getName();
+        String name = browseHistory != null ? browseHistory.getVodName() : "";
+        return name == null ? "" : name;
+    }
+
+    private record SearchEntry(String siteKey, String vodId) {
+
+        @Nullable
+        static SearchEntry parse(@NonNull String mediaId) {
+            String body = mediaId.substring(VOD_SEARCH.length());
+            int sep = body.indexOf(KEY_SEPARATOR);
+            if (sep < 0) return null;
+            return new SearchEntry(body.substring(0, sep), body.substring(sep + 1));
+        }
     }
 
     private record EpEntry(String historyKey, String flagName, int index, String siteKey, String vodPic) {
