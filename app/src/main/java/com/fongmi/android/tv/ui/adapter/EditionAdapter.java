@@ -5,37 +5,33 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.media3.common.MediaTitle;
+import androidx.media3.common.C;
+import androidx.media3.common.MediaEdition;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.fongmi.android.tv.databinding.AdapterTitleBinding;
+import com.fongmi.android.tv.databinding.AdapterEditionBinding;
 import com.fongmi.android.tv.utils.Util;
 
 import java.util.ArrayList;
-import java.util.Formatter;
 import java.util.List;
-import java.util.Locale;
 
-public class TitleAdapter extends RecyclerView.Adapter<TitleAdapter.ViewHolder> {
+public class EditionAdapter extends RecyclerView.Adapter<EditionAdapter.ViewHolder> {
 
     private final OnClickListener listener;
-    private final List<MediaTitle> mItems;
-    private final StringBuilder builder;
-    private final Formatter formatter;
+    private final List<MediaEdition> mItems;
 
-    public TitleAdapter(OnClickListener listener) {
+    public EditionAdapter(OnClickListener listener) {
         this.listener = listener;
         this.mItems = new ArrayList<>();
-        this.builder = new StringBuilder();
-        this.formatter = new Formatter(builder, Locale.getDefault());
     }
 
     public interface OnClickListener {
 
-        void onItemClick(MediaTitle item);
+        void onItemClick(MediaEdition item);
     }
 
-    public TitleAdapter addAll(List<MediaTitle> items) {
+    public EditionAdapter addAll(List<MediaEdition> items) {
+        mItems.clear();
         mItems.addAll(items);
         notifyDataSetChanged();
         return this;
@@ -54,21 +50,26 @@ public class TitleAdapter extends RecyclerView.Adapter<TitleAdapter.ViewHolder> 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(AdapterTitleBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
+        return new ViewHolder(AdapterEditionBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        MediaTitle item = mItems.get(position);
+        MediaEdition item = mItems.get(position);
         holder.binding.text.setSelected(item.selected);
-        holder.binding.text.setText(item.label + " [" + Util.format(builder, formatter, item.durationUs / 1000) + "]");
+        holder.binding.text.setText(getText(item));
+    }
+
+    private String getText(MediaEdition item) {
+        if (item.durationUs == C.TIME_UNSET) return item.label;
+        return item.label + " [" + Util.timeMs(item.durationUs / 1000) + "]";
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
-        private final AdapterTitleBinding binding;
+        private final AdapterEditionBinding binding;
 
-        public ViewHolder(@NonNull AdapterTitleBinding binding) {
+        public ViewHolder(@NonNull AdapterEditionBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
             itemView.setOnClickListener(this);

@@ -6,10 +6,10 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.databinding.AdapterParseBinding;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ParseAdapter extends RecyclerView.Adapter<ParseAdapter.ViewHolder> {
@@ -19,26 +19,7 @@ public class ParseAdapter extends RecyclerView.Adapter<ParseAdapter.ViewHolder> 
 
     public ParseAdapter(OnClickListener listener) {
         mListener = listener;
-        mItems = new ArrayList<>();
-    }
-
-    public void addAll(List<Parse> items) {
-        mItems.clear();
-        mItems.addAll(items);
-        notifyDataSetChanged();
-    }
-
-    public void clear() {
-        mItems.clear();
-        notifyDataSetChanged();
-    }
-
-    public Parse get(int position) {
-        return mItems.get(position);
-    }
-
-    public Parse first() {
-        return mItems.get(0);
+        mItems = VodConfig.get().getParses();
     }
 
     public int getPosition() {
