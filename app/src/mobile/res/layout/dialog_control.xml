@@ -49,7 +49,7 @@
         android:visibility="gone"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"
-        tools:listitem="@layout/adapter_parse_light"
+        tools:listitem="@layout/adapter_parse"
         tools:visibility="visible" />
 
     <com.google.android.material.textview.MaterialTextView
@@ -189,11 +189,23 @@
                 tools:text="片尾" />
 
             <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/title"
+                android:id="@+id/edition"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/shape_accent"
+                android:text="@string/play_edition"
+                android:textColor="@color/selector_control"
+                android:textSize="14sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/chapter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/shape_accent"
-                android:text="@string/play_title"
+                android:text="@string/play_chapter"
                 android:textColor="@color/selector_control"
                 android:textSize="14sp"
                 android:visibility="gone"

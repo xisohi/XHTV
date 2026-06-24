@@ -2,6 +2,7 @@ package com.fongmi.android.tv.ui.base;
 
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 
+import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -61,6 +62,11 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     protected void initEvent() {
+    }
+
+    protected void setPhoneOrientation(int orientation) {
+        int requested = ResUtil.isPad(this) ? ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED : orientation;
+        if (getRequestedOrientation() != requested) setRequestedOrientation(requested);
     }
 
     protected boolean isVisible(View view) {
