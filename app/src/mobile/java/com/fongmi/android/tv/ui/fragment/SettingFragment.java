@@ -59,10 +59,6 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         return new SettingFragment();
     }
 
-    private String getSwitch(boolean value) {
-        return getString(value ? R.string.setting_on : R.string.setting_off);
-    }
-
     private String getThemeText() {
         int color = Setting.getThemeColor();
         if (color == -1) return getString(R.string.setting_off);
@@ -102,7 +98,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     private void setOtherText() {
         mBinding.themeColorText.setText(getThemeText());
         mBinding.dohText.setText(getDohList()[getDohIndex()]);
-        mBinding.incognitoText.setText(getSwitch(Setting.isIncognito()));
+        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
     }
 
@@ -280,7 +276,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
 
     private void setIncognito(View view) {
         Setting.putIncognito(!Setting.isIncognito());
-        mBinding.incognitoText.setText(getSwitch(Setting.isIncognito()));
+        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
     }
 
     private void setSize(View view) {

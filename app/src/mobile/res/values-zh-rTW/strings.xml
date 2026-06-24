@@ -54,8 +54,8 @@
     <string name="shortcut"> 已於主螢幕新增捷徑。</string>
 
     <string-array name="select_background">
-        <item>關閉</item>
-        <item>開啟</item>
+        <item>關</item>
+        <item>開</item>
         <item>子母畫面</item>
     </string-array>
 
