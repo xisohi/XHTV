@@ -1,4 +1,4 @@
-package com.fongmi.android.tv.player;
+package com.fongmi.android.tv.player.extractor;
 
 import android.net.Uri;
 
@@ -6,14 +6,6 @@ import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
-import com.fongmi.android.tv.player.extractor.Force;
-import com.fongmi.android.tv.player.extractor.JianPian;
-import com.fongmi.android.tv.player.extractor.Push;
-import com.fongmi.android.tv.player.extractor.Strm;
-import com.fongmi.android.tv.player.extractor.TVBus;
-import com.fongmi.android.tv.player.extractor.Thunder;
-import com.fongmi.android.tv.player.extractor.Video;
-import com.fongmi.android.tv.player.extractor.Youtube;
 import com.fongmi.android.tv.utils.Task;
 
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package com.fongmi.android.tv.player;
+package com.fongmi.android.tv.player.util;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -40,7 +40,7 @@ public class PlayerHelper {
 
     public static Bundle toBundle(Map<String, String> headers) {
         Bundle bundle = new Bundle();
-        headers.forEach(bundle::putString);
+        if (headers != null) headers.forEach(bundle::putString);
         return bundle;
     }
 

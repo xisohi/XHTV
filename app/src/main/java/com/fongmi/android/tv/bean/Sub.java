@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.bean;
 
+import android.net.Uri;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -7,7 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.player.PlayerHelper;
+import com.fongmi.android.tv.player.util.PlayerHelper;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.utils.Trans;
 import com.google.gson.annotations.SerializedName;
@@ -34,7 +35,7 @@ public class Sub {
         return sub;
     }
 
-    public static Sub create(String name, String url, String lang, String format) {
+    public static Sub from(String name, String url, String lang, String format) {
         Sub sub = new Sub();
         sub.name = name;
         sub.url = url;
@@ -63,6 +64,10 @@ public class Sub {
         return flag == 0 ? C.SELECTION_FLAG_DEFAULT : flag;
     }
 
+    public void setFlag(int flag) {
+        this.flag = flag;
+    }
+
     public int getRawFlag() {
         return flag;
     }
@@ -71,8 +76,12 @@ public class Sub {
         return (flag & C.SELECTION_FLAG_FORCED) != 0;
     }
 
-    public void setFlag(int flag) {
-        this.flag = flag;
+    public boolean isEmpty() {
+        return getUrl().isEmpty();
+    }
+
+    public Uri getUri() {
+        return isEmpty() ? null : UrlUtil.uri(getUrl());
     }
 
     public void trans() {

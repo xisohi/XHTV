@@ -1,4 +1,4 @@
-package com.fongmi.android.tv.player;
+package com.fongmi.android.tv.player.parse;
 
 import android.text.TextUtils;
 

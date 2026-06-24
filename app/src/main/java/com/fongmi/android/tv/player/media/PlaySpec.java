@@ -1,14 +1,15 @@
-package com.fongmi.android.tv.player.engine;
+package com.fongmi.android.tv.player.media;
 
 import android.net.Uri;
 
+import androidx.media3.common.C;
 import androidx.media3.common.MediaMetadata;
 
 import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.Drm;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Sub;
-import com.fongmi.android.tv.player.PlayerHelper;
+import com.fongmi.android.tv.player.util.PlayerHelper;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.google.common.net.HttpHeaders;
@@ -29,6 +30,17 @@ public class PlaySpec {
     private String url;
     private Drm drm;
 
+    private PlaySpec(String key, String url, Map<String, String> headers, String format, Drm drm, List<Sub> subs, List<Danmaku> danmakus, MediaMetadata metadata) {
+        this.key = key;
+        this.url = url;
+        this.drm = drm;
+        this.subs = subs;
+        this.format = format;
+        this.headers = headers;
+        this.danmakus = danmakus;
+        this.metadata = metadata;
+    }
+
     public static PlaySpec from(String key, String url, Map<String, String> headers, MediaMetadata metadata) {
         return new PlaySpec(key, url, headers, null, null, null, null, metadata);
     }
@@ -39,17 +51,6 @@ public class PlaySpec {
 
     public static PlaySpec fromParse(Result result, String key, MediaMetadata metadata) {
         return new PlaySpec(key, null, null, result.getFormat(), result.getDrm(), result.getSubs(), result.getDanmaku(), metadata);
-    }
-
-    private PlaySpec(String key, String url, Map<String, String> headers, String format, Drm drm, List<Sub> subs, List<Danmaku> danmakus, MediaMetadata metadata) {
-        this.key = key;
-        this.url = url;
-        this.drm = drm;
-        this.subs = subs;
-        this.format = format;
-        this.headers = headers;
-        this.danmakus = danmakus;
-        this.metadata = metadata;
     }
 
     public String getKey() {
@@ -116,7 +117,14 @@ public class PlaySpec {
 
     public void setSub(Sub sub) {
         if (subs == null) subs = new ArrayList<>();
-        if (sub != null && !subs.contains(sub)) subs.add(0, sub);
+        if (sub == null) return;
+        subs.remove(sub);
+        clearForcedSubtitles();
+        subs.add(0, sub);
+    }
+
+    private void clearForcedSubtitles() {
+        for (Sub sub : subs) if (sub.isForced()) sub.setFlag(C.SELECTION_FLAG_AUTOSELECT);
     }
 
     public void setDanmaku(Danmaku item) {
@@ -127,6 +135,7 @@ public class PlaySpec {
 
     public void addDanmaku(Danmaku item) {
         if (danmakus == null) danmakus = new ArrayList<>();
-        if (!item.isEmpty() && !danmakus.contains(item)) danmakus.add(item);
+        if (item.isEmpty() || danmakus.contains(item)) return;
+        danmakus.add(item);
     }
 }

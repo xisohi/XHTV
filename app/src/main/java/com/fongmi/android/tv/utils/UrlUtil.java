@@ -6,14 +6,17 @@ import com.fongmi.android.tv.server.Server;
 import com.github.catvod.utils.UriUtil;
 import com.google.common.net.HttpHeaders;
 
+import java.io.File;
+
 public class UrlUtil {
 
     public static Uri uri(String url) {
-        return Uri.parse(url.trim().replace("\\", ""));
+        url = url.trim().replace("\\", "");
+        return url.startsWith("/") ? Uri.fromFile(new File(url)) : Uri.parse(url);
     }
 
     public static String scheme(String url) {
-        return url == null ? "" : scheme(Uri.parse(url));
+        return url == null ? "" : scheme(uri(url));
     }
 
     public static String scheme(Uri uri) {
@@ -22,7 +25,7 @@ public class UrlUtil {
     }
 
     public static String host(String url) {
-        return url == null ? "" : host(Uri.parse(url));
+        return url == null ? "" : host(uri(url));
     }
 
     public static String host(Uri uri) {
@@ -31,7 +34,7 @@ public class UrlUtil {
     }
 
     public static String path(String url) {
-        return url == null ? "" : path(Uri.parse(url));
+        return url == null ? "" : path(uri(url));
     }
 
     public static String path(Uri uri) {
@@ -45,15 +48,17 @@ public class UrlUtil {
 
     public static String convert(String url) {
         String scheme = scheme(url);
-        String path = null;
-        if ("assets".equals(scheme)) path = "/";
-        else if ("file".equals(scheme)) path = "/file/";
-        else if ("proxy".equals(scheme)) path = "/proxy?";
-        return path != null ? url.replace(scheme + "://", Server.get().getAddress(path)) : url;
+        String prefix = scheme + "://";
+        return switch (scheme) {
+            case "assets" -> url.replace(prefix, Server.get().getAddress("/"));
+            case "proxy" -> url.replace(prefix, Server.get().getAddress("/proxy?"));
+            case "file" -> Server.get().getAddress("/file/") + Uri.encode(url.substring((prefix).length()), "/");
+            default -> url;
+        };
     }
 
     public static String getName(String url) {
-        Uri uri = Uri.parse(url);
+        Uri uri = uri(url);
         String path = path(uri);
         String host = host(uri);
         return !path.isEmpty() ? path : !host.isEmpty() ? host : url;

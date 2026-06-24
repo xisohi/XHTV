@@ -1,5 +1,6 @@
-package com.fongmi.android.tv.player.exo;
+package com.fongmi.android.tv.player.track;
 
+import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
@@ -8,7 +9,7 @@ import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.Tracks;
 
 import com.fongmi.android.tv.bean.Track;
-import com.fongmi.android.tv.player.PlayerHelper;
+import com.fongmi.android.tv.player.util.PlayerHelper;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,11 @@ public class TrackUtil {
     }
 
     public static void reset(Player player) {
-        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().clearOverrides().build());
+        TrackSelectionParameters.Builder builder = player.getTrackSelectionParameters().buildUpon().clearOverrides();
+        builder.setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false);
+        builder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false);
+        builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false);
+        player.setTrackSelectionParameters(builder.build());
     }
 
     private static TrackInfo find(Player player, Track track) {

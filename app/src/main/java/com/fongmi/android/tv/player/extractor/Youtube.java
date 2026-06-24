@@ -11,7 +11,6 @@ import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.NewPipeImpl;
-import com.fongmi.android.tv.player.Source;
 import com.fongmi.android.tv.utils.UrlUtil;
 
 import org.schabi.newpipe.extractor.ListExtractor;
@@ -191,7 +190,7 @@ public class Youtube implements Source.Extractor {
         String label = subtitle.getDisplayLanguageName();
         String language = subtitle.getLanguageTag();
         if (label == null || label.isEmpty()) label = language;
-        return Sub.create(label, url, language, MimeTypes.TEXT_VTT);
+        return Sub.from(label, url, language, MimeTypes.TEXT_VTT);
     }
 
     private String getSubtitleUrl(SubtitlesStream subtitle) {
