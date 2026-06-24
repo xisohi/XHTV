@@ -7,12 +7,10 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.databinding.AdapterFlagBinding;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class FlagAdapter extends RecyclerView.Adapter<FlagAdapter.ViewHolder> {
@@ -33,11 +31,6 @@ public class FlagAdapter extends RecyclerView.Adapter<FlagAdapter.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    public void add(Flag item) {
-        mItems.add(item);
-        notifyItemInserted(mItems.size() - 1);
-    }
-
     public void clear() {
         mItems.clear();
         notifyDataSetChanged();
@@ -47,10 +40,6 @@ public class FlagAdapter extends RecyclerView.Adapter<FlagAdapter.ViewHolder> {
         return mItems.get(position);
     }
 
-    public List<Flag> getItems() {
-        return mItems;
-    }
-
     public int indexOf(Flag item) {
         return mItems.indexOf(item);
     }
@@ -58,27 +47,6 @@ public class FlagAdapter extends RecyclerView.Adapter<FlagAdapter.ViewHolder> {
     public int getPosition() {
         for (int i = 0; i < mItems.size(); i++) if (mItems.get(i).isSelected()) return i;
         return 0;
-    }
-
-    public Flag getActivated() {
-        return mItems.get(getPosition());
-    }
-
-    public void setSelected(Flag item) {
-        if (indexOf(item) == -1) item.setFlag(mItems.get(0).getFlag());
-        for (Flag flag : mItems) flag.setSelected(item);
-        notifyItemRangeChanged(0, getItemCount());
-    }
-
-    public void toggle(Episode item) {
-        int flagPosition = getPosition();
-        for (int i = 0; i < mItems.size(); i++) mItems.get(i).toggle(flagPosition == i, item);
-        notifyDataSetChanged();
-    }
-
-    public void reverse() {
-        for (Flag flag : mItems) Collections.reverse(flag.getEpisodes());
-        notifyDataSetChanged();
     }
 
     public void setNextFocusDown(int nextFocusDown) {

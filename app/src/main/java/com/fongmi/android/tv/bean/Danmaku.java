@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.bean;
 
+import android.net.Uri;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -68,8 +69,8 @@ public class Danmaku {
         return getUrl().isEmpty();
     }
 
-    public String getRealUrl() {
-        return UrlUtil.convert(getUrl().startsWith("/") ? "file:/" + getUrl() : getUrl());
+    public Uri getUri() {
+        return isEmpty() ? null : UrlUtil.uri(getUrl());
     }
 
     @Override
