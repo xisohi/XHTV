@@ -137,16 +137,19 @@ dependencies {
     annotationProcessor libs.glide.compiler
     coreLibraryDesugaring libs.desugar
     // 使用 media 模块（core_settings.gradle 已经定义好这些路径）
+    implementation project(':media-lib-cast')
     implementation project(':media-lib-common')
     implementation project(':media-lib-container')
     implementation project(':media-lib-database')
     implementation project(':media-lib-datasource')
     implementation project(':media-lib-datasource-okhttp')
+    implementation project(':media-lib-datasource-rtmp')
     implementation project(':media-lib-decoder')
     implementation project(':media-lib-decoder-av1')
     implementation project(':media-lib-decoder-ffmpeg')
     implementation project(':media-lib-decoder-flac')
     implementation project(':media-lib-decoder-iamf')
+    implementation project(':media-lib-decoder-midi')
     implementation project(':media-lib-decoder-mpegh')
     implementation project(':media-lib-decoder-opus')
     implementation project(':media-lib-decoder-vp9')
