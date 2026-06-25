@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.player.exo;
 
+import android.os.Handler;
 import android.os.HandlerThread;
 
 import androidx.annotation.NonNull;
@@ -17,30 +18,47 @@ import java.util.concurrent.Executors;
 
 public class PreCache implements Player.Listener {
 
+    private static final long TICK_MS = 5000;
+    private static final long MIN_STEP_MS = 5000;
+    private static final long MAX_STEP_MS = 30000;
+    private static final int STEP_DIV = 4;
+
+    private final Runnable task;
+
     private ExecutorService executor;
     private PreCacheHelper helper;
+    private Handler handler;
     private HandlerThread worker;
     private Player player;
     private int threads;
-    private long pendingStartMs;
-    private boolean pending;
+    private long lastStartMs;
+    private long seekStartMs;
+
+    public PreCache() {
+        task = this::check;
+    }
 
     public void start(Player player, MediaItem mediaItem) {
         stop();
         if (!PreloadSetting.isPreload() || !canPreCache(mediaItem)) return;
         this.player = player;
+        this.handler = new Handler(player.getApplicationLooper());
         this.helper = createHelper(mediaItem);
         this.player.addListener(this);
-        setPending();
-        preCacheIfReady();
+        clearSeek();
+        lastStartMs = C.TIME_UNSET;
+        check();
     }
 
     public void stop() {
+        cancel();
         if (player != null) player.removeListener(this);
         if (helper != null) helper.release(false);
+        handler = null;
         helper = null;
         player = null;
-        clearPending();
+        clearSeek();
+        lastStartMs = C.TIME_UNSET;
     }
 
     public void release() {
@@ -51,36 +69,55 @@ public class PreCache implements Player.Listener {
 
     @Override
     public void onPlaybackStateChanged(int state) {
-        if (state == Player.STATE_READY && pending) preCacheIfReady();
+        if (state == Player.STATE_READY) check();
+        else if (isStopped(state)) cancel();
     }
 
     @Override
     public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {
         if (!isSeek(reason) || helper == null) return;
         helper.stop();
-        setPending(newPosition.positionMs);
-        preCacheIfReady();
+        markSeek(newPosition.positionMs);
+        check();
     }
 
-    private void preCacheIfReady() {
-        if (helper == null || player == null) return;
+    private void check() {
+        cancel();
+        if (update()) schedule();
+    }
+
+    private boolean update() {
+        if (helper == null || player == null) return false;
         if (!PreloadSetting.isPreload()) {
             stop();
-            return;
+            return false;
         }
-        if (player.getPlaybackState() != Player.STATE_READY) return;
+        int state = player.getPlaybackState();
+        if (isStopped(state)) return false;
+        if (state != Player.STATE_READY) return true;
         if (player.isCurrentMediaItemLive()) {
             stop();
-            return;
+            return false;
         }
-        long startMs = getStartPosition();
-        long lengthMs = getPreCacheLengthMs(startMs);
+        long startMs = getStart();
+        long lengthMs = getLength(startMs);
         if (lengthMs <= 0) {
-            clearPending();
-            return;
+            clearSeek();
+            return true;
         }
+        if (!shouldPreCache(startMs)) return true;
         helper.preCache(startMs, lengthMs);
-        clearPending();
+        lastStartMs = startMs;
+        clearSeek();
+        return true;
+    }
+
+    private void schedule() {
+        if (handler != null) handler.postDelayed(task, TICK_MS);
+    }
+
+    private void cancel() {
+        if (handler != null) handler.removeCallbacks(task);
     }
 
     private PreCacheHelper createHelper(MediaItem mediaItem) {
@@ -96,28 +133,40 @@ public class PreCache implements Player.Listener {
         return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) && !MediaSourceFactory.isConcatenatingUrl(url);
     }
 
-    private long getStartPosition() {
-        return Math.max(0, pendingStartMs != C.TIME_UNSET ? pendingStartMs : player.getCurrentPosition());
+    private long getStart() {
+        return Math.max(0, hasSeek() ? seekStartMs : player.getCurrentPosition());
     }
 
-    private long getPreCacheLengthMs(long startMs) {
+    private boolean shouldPreCache(long startMs) {
+        if (hasSeek()) return true;
+        if (lastStartMs == C.TIME_UNSET) return true;
+        return Math.abs(startMs - lastStartMs) >= getStep();
+    }
+
+    private boolean isStopped(int state) {
+        return state == Player.STATE_ENDED || state == Player.STATE_IDLE;
+    }
+
+    private long getLength(long startMs) {
         long durationMs = player.getDuration();
         if (durationMs <= 0) return 0;
         return Math.min(PreloadSetting.getPreloadDurationMs(), durationMs - startMs);
     }
 
-    private void setPending() {
-        setPending(C.TIME_UNSET);
+    private long getStep() {
+        return Math.clamp(PreloadSetting.getPreloadDurationMs() / STEP_DIV, MIN_STEP_MS, MAX_STEP_MS);
     }
 
-    private void setPending(long startMs) {
-        pendingStartMs = startMs;
-        pending = true;
+    private void markSeek(long startMs) {
+        seekStartMs = startMs;
     }
 
-    private void clearPending() {
-        pendingStartMs = C.TIME_UNSET;
-        pending = false;
+    private void clearSeek() {
+        seekStartMs = C.TIME_UNSET;
+    }
+
+    private boolean hasSeek() {
+        return seekStartMs != C.TIME_UNSET;
     }
 
     private Executor getExecutor() {
