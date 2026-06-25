@@ -30,15 +30,17 @@ import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.event.StateEvent;
 import com.fongmi.android.tv.impl.Callback;
-import com.fongmi.android.tv.player.Source;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.receiver.ShortcutReceiver;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.FragmentStateManager;
 import com.fongmi.android.tv.ui.fragment.SettingDanmakuFragment;
+import com.fongmi.android.tv.ui.fragment.SettingDecodeFragment;
 import com.fongmi.android.tv.ui.fragment.SettingFragment;
 import com.fongmi.android.tv.ui.fragment.SettingPlayerFragment;
+import com.fongmi.android.tv.ui.fragment.SettingPreloadFragment;
 import com.fongmi.android.tv.ui.fragment.VodFragment;
 import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.Notify;
@@ -113,6 +115,8 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
             case 1 -> SettingFragment.newInstance();
             case 2 -> SettingPlayerFragment.newInstance();
             case 3 -> SettingDanmakuFragment.newInstance();
+            case 4 -> SettingPreloadFragment.newInstance();
+            case 5 -> SettingDecodeFragment.newInstance();
             default -> null;
         });
         if (savedInstanceState == null) change(0);
@@ -223,7 +227,9 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     protected void onBackInvoked() {
         if (!mBinding.navigation.getMenu().findItem(R.id.vod).isVisible()) {
             setNavigation();
-        } else if (mManager.isVisible(2) || mManager.isVisible(3)) {
+        } else if (mManager.isVisible(4) || mManager.isVisible(5)) {
+            change(2);
+        } else if (mManager.isVisible(3) || mManager.isVisible(2)) {
             change(1);
         } else if (mManager.isVisible(1)) {
             change(0);

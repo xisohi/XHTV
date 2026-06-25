@@ -8,44 +8,92 @@ import com.github.catvod.utils.Prefers;
 
 public class PlayerSetting {
 
+    public static final int ENGINE_EXO = 0;
+    public static final int ENGINE_MPV = 1;
+    public static final int RENDER_SURFACE = 0;
+    public static final int RENDER_TEXTURE = 1;
+    public static final int MIN_SCALE = 0;
+    public static final int MAX_SCALE = 4;
+    private static final int MIN_SIZE = 0;
+    private static final int MAX_SIZE = 3;
+    private static final int MIN_BACKGROUND = 0;
+    private static final int MAX_BACKGROUND = 2;
+    private static final float MIN_SPEED = 2.0f;
+    private static final float MAX_SPEED = 5.0f;
+
+    public static int getEngine() {
+        return Math.clamp(Prefers.getInt("player_engine", ENGINE_EXO), ENGINE_EXO, ENGINE_MPV);
+    }
+
+    public static void putEngine(int engine) {
+        Prefers.put("player_engine", Math.clamp(engine, ENGINE_EXO, ENGINE_MPV));
+        if (!isMpv() && isTunnel()) Prefers.put("render", RENDER_SURFACE);
+    }
+
+    public static boolean isMpv() {
+        return getEngine() == ENGINE_MPV;
+    }
+
+    public static boolean isMpvGpuNext() {
+        return Prefers.getBoolean("mpv_gpu_next");
+    }
+
+    public static void putMpvGpuNext(boolean gpuNext) {
+        Prefers.put("mpv_gpu_next", gpuNext);
+    }
+
+    public static boolean isMpvVulkan() {
+        return Prefers.getBoolean("mpv_vulkan");
+    }
+
+    public static void putMpvVulkan(boolean vulkan) {
+        Prefers.put("mpv_vulkan", vulkan);
+    }
+
     public static int getRender() {
-        return Prefers.getInt("render", 0);
+        return Math.clamp(Prefers.getInt("render", RENDER_SURFACE), RENDER_SURFACE, RENDER_TEXTURE);
     }
 
     public static void putRender(int render) {
-        Prefers.put("render", render);
+        Prefers.put("render", Math.clamp(render, RENDER_SURFACE, RENDER_TEXTURE));
+        if (!isMpv() && isTunnel() && getRender() == RENDER_TEXTURE) Prefers.put("tunnel", false);
+    }
+
+    public static boolean isTunnel() {
+        return Prefers.getBoolean("tunnel");
+    }
+
+    public static void putTunnel(boolean tunnel) {
+        Prefers.put("tunnel", tunnel);
+        if (!isMpv() && tunnel) Prefers.put("render", RENDER_SURFACE);
+    }
+
+    public static boolean isTunnelingEnabled() {
+        return isTunnel() && getRender() == RENDER_SURFACE;
     }
 
     public static int getSize() {
-        return Prefers.getInt("size", 2);
+        return Math.clamp(Prefers.getInt("size", 2), MIN_SIZE, MAX_SIZE);
     }
 
     public static void putSize(int size) {
-        Prefers.put("size", size);
+        Prefers.put("size", Math.clamp(size, MIN_SIZE, MAX_SIZE));
     }
 
     public static int getScale() {
-        return Prefers.getInt("scale");
+        return Math.clamp(Prefers.getInt("scale"), MIN_SCALE, MAX_SCALE);
     }
 
     public static void putScale(int scale) {
-        Prefers.put("scale", scale);
-    }
-
-    public static int getBuffer() {
-        return Math.min(Math.max(Prefers.getInt("buffer"), 1), 10);
-    }
-
-    public static void putBuffer(int buffer) {
-        Prefers.put("buffer", buffer);
+        Prefers.put("scale", Math.clamp(scale, MIN_SCALE, MAX_SCALE));
     }
 
     public static int getBackground() {
-        return Prefers.getInt("background", 2);
+        return Math.clamp(Prefers.getInt("background", 2), MIN_BACKGROUND, MAX_BACKGROUND);
     }
 
     public static void putBackground(int background) {
-        Prefers.put("background", background);
+        Prefers.put("background", Math.clamp(background, MIN_BACKGROUND, MAX_BACKGROUND));
     }
 
     public static boolean isBackgroundOff() {
@@ -61,11 +109,11 @@ public class PlayerSetting {
     }
 
     public static float getSpeed() {
-        return Math.min(Math.max(Prefers.getFloat("speed", 3), 2), 5);
+        return Math.clamp(Prefers.getFloat("speed", 3), MIN_SPEED, MAX_SPEED);
     }
 
     public static void putSpeed(float speed) {
-        Prefers.put("speed", speed);
+        Prefers.put("speed", Math.clamp(speed, MIN_SPEED, MAX_SPEED));
     }
 
     public static boolean isCaption() {
@@ -76,16 +124,32 @@ public class PlayerSetting {
         Prefers.put("caption", caption);
     }
 
+    public static float getSubtitleTextSize() {
+        return Prefers.getFloat("subtitle_text_size");
+    }
+
+    public static void putSubtitleTextSize(float value) {
+        Prefers.put("subtitle_text_size", value);
+    }
+
+    public static float getSubtitlePosition() {
+        return Prefers.getFloat("subtitle_position");
+    }
+
+    public static void putSubtitlePosition(float value) {
+        Prefers.put("subtitle_position", value);
+    }
+
     public static boolean hasCaption() {
         return new Intent(Settings.ACTION_CAPTIONING_SETTINGS).resolveActivity(App.get().getPackageManager()) != null;
     }
 
-    public static boolean isTunnel() {
-        return Prefers.getBoolean("tunnel");
+    public static boolean isAudioPassThrough() {
+        return Prefers.getBoolean("audio_pass_through", true);
     }
 
-    public static void putTunnel(boolean tunnel) {
-        Prefers.put("tunnel", tunnel);
+    public static void putAudioPassThrough(boolean audioPassThrough) {
+        Prefers.put("audio_pass_through", audioPassThrough);
     }
 
     public static boolean isAudioPrefer() {
@@ -110,21 +174,5 @@ public class PlayerSetting {
 
     public static void putPreferAAC(boolean preferAAC) {
         Prefers.put("prefer_aac", preferAAC);
-    }
-
-    public static float getSubtitleTextSize() {
-        return Prefers.getFloat("subtitle_text_size");
-    }
-
-    public static void putSubtitleTextSize(float value) {
-        Prefers.put("subtitle_text_size", value);
-    }
-
-    public static float getSubtitlePosition() {
-        return Prefers.getFloat("subtitle_position");
-    }
-
-    public static void putSubtitlePosition(float value) {
-        Prefers.put("subtitle_position", value);
     }
 }

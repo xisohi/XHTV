@@ -12,6 +12,7 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ActivitySettingDanmakuBinding;
 import com.fongmi.android.tv.impl.DanmakuListener;
 import com.fongmi.android.tv.setting.DanmakuSetting;
+import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.DanmakuApiDialog;
 
@@ -21,10 +22,6 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, SettingDanmakuActivity.class));
-    }
-
-    private String getSwitch(boolean value) {
-        return getString(value ? R.string.setting_on : R.string.setting_off);
     }
 
     private String getApiStatus() {
@@ -40,9 +37,9 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
     protected void initView(Bundle savedInstanceState) {
         mBinding.danmakuLoad.requestFocus();
         mBinding.danmakuApiText.setText(getApiStatus());
-        mBinding.danmakuAutoText.setText(getSwitch(DanmakuSetting.isAuto()));
-        mBinding.danmakuLoadText.setText(getSwitch(DanmakuSetting.isLoad()));
-        mBinding.danmakuSpiderText.setText(getSwitch(DanmakuSetting.isSpiderFirst()));
+        mBinding.danmakuAutoText.setText(Setting.getSwitch(DanmakuSetting.isAuto()));
+        mBinding.danmakuLoadText.setText(Setting.getSwitch(DanmakuSetting.isLoad()));
+        mBinding.danmakuSpiderText.setText(Setting.getSwitch(DanmakuSetting.isSpiderFirst()));
         updateApiVisibility();
     }
 
@@ -56,7 +53,7 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
 
     private void setDanmakuLoad(View view) {
         DanmakuSetting.putLoad(!DanmakuSetting.isLoad());
-        mBinding.danmakuLoadText.setText(getSwitch(DanmakuSetting.isLoad()));
+        mBinding.danmakuLoadText.setText(Setting.getSwitch(DanmakuSetting.isLoad()));
         updateApiVisibility();
     }
 
@@ -90,12 +87,12 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
 
     private void setDanmakuAuto(View view) {
         DanmakuSetting.putAuto(!DanmakuSetting.isAuto());
-        mBinding.danmakuAutoText.setText(getSwitch(DanmakuSetting.isAuto()));
+        mBinding.danmakuAutoText.setText(Setting.getSwitch(DanmakuSetting.isAuto()));
         updateSpiderVisibility();
     }
 
     private void setDanmakuSpider(View view) {
         DanmakuSetting.putSpiderFirst(!DanmakuSetting.isSpiderFirst());
-        mBinding.danmakuSpiderText.setText(getSwitch(DanmakuSetting.isSpiderFirst()));
+        mBinding.danmakuSpiderText.setText(Setting.getSwitch(DanmakuSetting.isSpiderFirst()));
     }
 }

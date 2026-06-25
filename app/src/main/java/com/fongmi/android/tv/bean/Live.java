@@ -23,6 +23,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -216,6 +217,14 @@ public class Live {
 
     public String getTimeZone() {
         return TextUtils.isEmpty(timeZone) ? "" : timeZone;
+    }
+
+    public ZoneId getZoneId() {
+        try {
+            return getTimeZone().isEmpty() ? ZoneId.systemDefault() : ZoneId.of(getTimeZone());
+        } catch (Exception ignored) {
+            return ZoneId.systemDefault();
+        }
     }
 
     public String getKeep() {

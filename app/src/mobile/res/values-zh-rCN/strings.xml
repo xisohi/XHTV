@@ -54,8 +54,8 @@
     <string name="shortcut"> 已于主萤幕新增捷径。</string>
 
     <string-array name="select_background">
-        <item>关闭</item>
-        <item>开启</item>
+        <item>关</item>
+        <item>开</item>
         <item>画中画</item>
     </string-array>
 

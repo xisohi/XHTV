@@ -64,6 +64,15 @@ class LiveBrowse {
     }
 
     @Nullable
+    static MediaItem getItem(@NonNull String mediaId) {
+        if (mediaId.startsWith(LIVE_GROUP)) return BrowseTree.folder(mediaId, mediaId.substring(LIVE_GROUP.length()));
+        LiveEntry entry = livePosMap.get(mediaId);
+        if (entry == null) return null;
+        Channel channel = entry.channel();
+        return BrowseTree.playable(mediaId, channel.getNumber() + " " + channel.getShow(), null, channel.getLogo());
+    }
+
+    @Nullable
     static MediaItem resolve(@NonNull String mediaId) throws Exception {
         LiveEntry entry = livePosMap.get(mediaId);
         return resolveChannel(entry != null ? entry.channel() : null, mediaId);

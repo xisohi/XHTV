@@ -157,20 +157,7 @@
         android:orientation="vertical"
         android:paddingBottom="8dp">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/parse"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:orientation="horizontal"
-            android:padding="8dp"
-            android:visibility="gone"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:itemCount="5"
-            tools:listitem="@layout/adapter_parse_dark" />
-
-        <com.fongmi.android.tv.ui.custom.CustomSeekView
+        <androidx.media3.ui.PlayerSeekView
             android:id="@+id/seek"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

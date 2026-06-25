@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
+import androidx.media3.common.C;
 import androidx.media3.common.Player;
 
 import com.fongmi.android.tv.App;
@@ -137,8 +138,7 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
 
     private void bindPlaybackService() {
         if (bound) return;
-        bound = true;
-        bindService(new Intent(this, PlaybackService.class).setAction(PlaybackService.LOCAL_BIND_ACTION), this, BIND_AUTO_CREATE);
+        bound = bindService(new Intent(this, PlaybackService.class).setAction(PlaybackService.LOCAL_BIND_ACTION), this, BIND_AUTO_CREATE);
     }
 
     private void cleanupPlaybackRefs() {
@@ -186,7 +186,7 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder binder) {
-        if (!isDlnaActive) {
+        if (!bound || !isDlnaActive) {
             unbindPlaybackService();
             return;
         }
@@ -197,11 +197,11 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
         currentListenerPlayer = player.getPlayer();
         currentListenerPlayer.addListener(listener);
         App.post(positionUpdater, 1000);
+        notifyState();
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        bound = false;
         cleanupPlaybackRefs();
     }
 
@@ -209,8 +209,7 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
         if (avTransportImpl == null || player == null || !isDlnaActive) return;
         int state = player.getPlaybackState();
         if (state == Player.STATE_IDLE) return;
-        long duration = player.getDuration();
-        avTransportImpl.updatePositionCache(player.getPosition(), duration > 0 ? duration : -1);
+        avTransportImpl.updatePositionCache(player.getPosition(), getDuration());
         RenderState renderState = switch (state) {
             case Player.STATE_BUFFERING -> RenderState.PREPARING;
             case Player.STATE_READY -> player.isPlaying() ? RenderState.PLAYING : RenderState.PAUSED;
@@ -223,10 +222,15 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
     private final Runnable positionUpdater = new Runnable() {
         @Override
         public void run() {
-            if (player != null && avTransportImpl != null && player.isPlaying()) avTransportImpl.updatePositionCache(player.getPosition(), player.getDuration());
+            if (player != null && avTransportImpl != null && player.isPlaying()) avTransportImpl.updatePositionCache(player.getPosition(), getDuration());
             if (player != null) App.post(this, 1000);
         }
     };
+
+    private long getDuration() {
+        long duration = player.getDuration();
+        return duration == C.TIME_UNSET || duration <= 0 ? -1 : duration;
+    }
 
     private final Player.Listener listener = new Player.Listener() {
         @Override
@@ -246,6 +250,7 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
             if (currentListenerPlayer != null) currentListenerPlayer.removeListener(listener);
             currentListenerPlayer = newPlayer;
             newPlayer.addListener(listener);
+            notifyState();
         }
     };
 

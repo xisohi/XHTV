@@ -1,64 +1,41 @@
 package com.fongmi.android.tv.player.engine;
 
-import androidx.media3.common.MediaMetadata;
-import androidx.media3.common.MediaTitle;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
-import androidx.media3.common.Tracks;
 
-import com.fongmi.android.tv.bean.Track;
-
-import java.util.Collections;
-import java.util.List;
+import com.fongmi.android.tv.bean.Sub;
+import com.fongmi.android.tv.player.media.PlaySpec;
 
 public interface PlayerEngine {
 
     int SOFT = 0;
     int HARD = 1;
 
+    Type getType();
+
     Player getPlayer();
 
     void release();
 
-    Player rebuild(Player.Listener listener);
+    Player rebuild();
 
-    int getDecode();
+    boolean setDecode(int decode);
 
-    void setDecode(int decode);
+    void start(PlaySpec spec, long startPositionMs);
 
-    boolean isHard();
-
-    String getDecodeText();
-
-    void start(PlaySpec spec);
-
-    void setMetadata(MediaMetadata data);
+    default void stop() {
+        getPlayer().stop();
+    }
 
     boolean isLive();
 
     boolean isVod();
 
-    void setTrack(List<Track> tracks);
+    default void setSubtitleStyle() {
+    }
 
-    void resetTrack();
-
-    boolean haveTrack(int type);
-
-    Tracks getCurrentTracks();
-
-    default boolean haveTitle() {
+    default boolean addSubtitle(Sub sub) {
         return false;
-    }
-
-    default boolean isRepeatOne() {
-        return false;
-    }
-
-    default void setRepeatOne(boolean repeat) {
-    }
-
-    default List<MediaTitle> getCurrentMediaTitles() {
-        return Collections.emptyList();
     }
 
     String getErrorMessage(PlaybackException e);
@@ -69,5 +46,10 @@ public interface PlayerEngine {
         RECOVERED,
         DECODE,
         FATAL
+    }
+
+    enum Type {
+        EXO,
+        MPV
     }
 }

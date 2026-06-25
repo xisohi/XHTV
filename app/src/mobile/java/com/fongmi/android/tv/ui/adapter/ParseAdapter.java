@@ -2,16 +2,13 @@ package com.fongmi.android.tv.ui.adapter;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Parse;
-import com.fongmi.android.tv.databinding.AdapterParseDarkBinding;
-import com.fongmi.android.tv.databinding.AdapterParseLightBinding;
-import com.fongmi.android.tv.ui.base.ViewType;
+import com.fongmi.android.tv.databinding.AdapterParseBinding;
 
 import java.util.List;
 
@@ -19,12 +16,10 @@ public class ParseAdapter extends RecyclerView.Adapter<ParseAdapter.ViewHolder> 
 
     private final OnClickListener listener;
     private final List<Parse> mItems;
-    private final int viewType;
 
-    public ParseAdapter(OnClickListener listener, int viewType) {
+    public ParseAdapter(OnClickListener listener) {
         this.mItems = VodConfig.get().getParses();
         this.listener = listener;
-        this.viewType = viewType;
     }
 
     public interface OnClickListener {
@@ -37,61 +32,32 @@ public class ParseAdapter extends RecyclerView.Adapter<ParseAdapter.ViewHolder> 
         return 0;
     }
 
-    public Parse get(int position) {
-        return mItems.get(position);
-    }
-
-    public Parse first() {
-        return mItems.get(0);
-    }
-
-    public boolean isEmpty() {
-        return getItemCount() == 0;
-    }
-
     @Override
     public int getItemCount() {
         return mItems.size();
     }
 
-    @Override
-    public int getItemViewType(int position) {
-        return viewType;
-    }
-
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (viewType == ViewType.DARK) return new ViewHolder(AdapterParseDarkBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
-        return new ViewHolder(AdapterParseLightBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
+        return new ViewHolder(AdapterParseBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Parse item = mItems.get(position);
-        if (holder.darkBinding != null) holder.initView(holder.darkBinding.text, item);
-        if (holder.lightBinding != null) holder.initView(holder.lightBinding.text, item);
+        holder.binding.text.setText(item.getName());
+        holder.binding.text.setSelected(item.isSelected());
+        holder.binding.text.setOnClickListener(v -> listener.onItemClick(item));
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
-        private AdapterParseDarkBinding darkBinding;
-        private AdapterParseLightBinding lightBinding;
+        private final AdapterParseBinding binding;
 
-        ViewHolder(@NonNull AdapterParseDarkBinding binding) {
+        ViewHolder(@NonNull AdapterParseBinding binding) {
             super(binding.getRoot());
-            this.darkBinding = binding;
-        }
-
-        ViewHolder(@NonNull AdapterParseLightBinding binding) {
-            super(binding.getRoot());
-            this.lightBinding = binding;
-        }
-
-        void initView(TextView view, Parse item) {
-            view.setText(item.getName());
-            view.setSelected(item.isSelected());
-            view.setOnClickListener(v -> listener.onItemClick(item));
+            this.binding = binding;
         }
     }
 }

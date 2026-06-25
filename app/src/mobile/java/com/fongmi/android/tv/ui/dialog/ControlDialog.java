@@ -19,7 +19,6 @@ import com.fongmi.android.tv.databinding.ActivityVideoBinding;
 import com.fongmi.android.tv.databinding.DialogControlBinding;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.ui.adapter.ParseAdapter;
-import com.fongmi.android.tv.ui.base.ViewType;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Timer;
@@ -86,8 +85,8 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
         binding.opening.setText(parent.control.action.opening.getText());
         binding.repeat.setSelected(parent.control.action.repeat.isSelected());
         binding.timer.setSelected(Timer.get().isRunning());
+        setMediaOptionVisible();
         setTrackVisible();
-        setTitleVisible();
         setScaleText();
         setPlayer();
         setParse();
@@ -101,9 +100,10 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
         binding.text.setOnClickListener(v -> dismiss(parent.control.action.text));
         binding.audio.setOnClickListener(v -> dismiss(parent.control.action.audio));
         binding.video.setOnClickListener(v -> dismiss(parent.control.action.video));
-        binding.title.setOnClickListener(v -> dismiss(parent.control.action.title));
         binding.player.setOnClickListener(v -> dismiss(parent.control.action.player));
         binding.danmaku.setOnClickListener(v -> dismiss(parent.control.action.danmaku));
+        binding.edition.setOnClickListener(v -> dismiss(parent.control.action.edition));
+        binding.chapter.setOnClickListener(v -> dismiss(parent.control.action.chapter));
         binding.repeat.setOnClickListener(v -> active(binding.repeat, parent.control.action.repeat));
         binding.decode.setOnClickListener(v -> click(binding.decode, parent.control.action.decode));
         binding.ending.setOnClickListener(v -> click(binding.ending, parent.control.action.ending));
@@ -135,7 +135,7 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
         binding.parse.setHasFixedSize(true);
         binding.parse.setItemAnimator(null);
         binding.parse.addItemDecoration(new SpaceItemDecoration(8));
-        binding.parse.setAdapter(new ParseAdapter(this, ViewType.LIGHT));
+        binding.parse.setAdapter(new ParseAdapter(this));
     }
 
     private void setScale(View view) {
@@ -184,8 +184,9 @@ public class ControlDialog extends BaseBottomSheetDialog implements ParseAdapter
         binding.track.setVisibility(binding.text.getVisibility() == View.GONE && binding.audio.getVisibility() == View.GONE && binding.video.getVisibility() == View.GONE ? View.GONE : View.VISIBLE);
     }
 
-    public void setTitleVisible() {
-        binding.title.setVisibility(parent.control.action.title.getVisibility());
+    public void setMediaOptionVisible() {
+        binding.edition.setVisibility(parent.control.action.edition.getVisibility());
+        binding.chapter.setVisibility(parent.control.action.chapter.getVisibility());
     }
 
     @Override

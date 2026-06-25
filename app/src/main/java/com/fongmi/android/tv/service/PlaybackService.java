@@ -2,12 +2,14 @@ package com.fongmi.android.tv.service;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
 import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
@@ -21,6 +23,7 @@ import androidx.media3.session.SessionCommand;
 import androidx.media3.session.SessionCommands;
 import androidx.media3.session.SessionError;
 import androidx.media3.session.SessionResult;
+import androidx.media3.ui.danmaku.DanmakuConfig;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
@@ -30,7 +33,7 @@ import com.fongmi.android.tv.browse.BrowseTree;
 import com.fongmi.android.tv.event.ActionEvent;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.player.PlayerManager;
-import com.fongmi.android.tv.player.engine.PlaySpec;
+import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.utils.Task;
 import com.google.common.collect.ImmutableList;
@@ -50,19 +53,20 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     public static final String LOCAL_BIND_ACTION = BuildConfig.APPLICATION_ID.concat(".LOCAL_BIND");
 
     private static final SessionCommand COMMAND_REPEAT = new SessionCommand(ActionEvent.REPEAT, Bundle.EMPTY);
+    private static final String ACTION_MEDIA_BROWSER_SERVICE = "android.media.browse.MediaBrowserService";
 
     private static volatile boolean running;
 
     private final List<PlayerCallback> playerCallbacks = new CopyOnWriteArrayList<>();
+    private final MediaClients clients = new MediaClients();
     private final IBinder binder = new LocalBinder();
 
     private NavigationCallback navigationCallback;
     private MediaLibrarySession session;
     private Runnable onNewBinding;
-    private boolean externalBound;
     private PlayerManager player;
     private String navigationKey;
-    private Player exoPlayer;
+    private Player sessionPlayer;
 
     public static boolean isRunning() {
         return running;
@@ -86,9 +90,9 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         super.onCreate();
         running = true;
         player = new PlayerManager(this);
-        exoPlayer = player.getPlayer();
-        exoPlayer.addListener(listener);
-        session = new MediaLibrarySession.Builder(this, wrap(exoPlayer), this).build();
+        sessionPlayer = player.getPlayer();
+        sessionPlayer.addListener(listener);
+        session = new MediaLibrarySession.Builder(this, wrap(sessionPlayer), this).build();
         session.setSessionActivity(buildDefaultIntent());
         EventBus.getDefault().register(this);
         Server.get().setService(this);
@@ -137,20 +141,20 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         return LOCAL_BIND_ACTION.equals(intent != null ? intent.getAction() : null);
     }
 
-    private boolean isExternalBind(Intent intent) {
-        return "android.media.browse.MediaBrowserService".equals(intent != null ? intent.getAction() : null);
+    private boolean isBrowserBind(Intent intent) {
+        return ACTION_MEDIA_BROWSER_SERVICE.equals(intent != null ? intent.getAction() : null);
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         if (isLocalBind(intent)) return binder;
-        if (isExternalBind(intent)) externalBound = true;
+        if (isBrowserBind(intent)) clients.bind();
         return super.onBind(intent);
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        if (isExternalBind(intent)) releaseExternal();
+        if (isBrowserBind(intent)) releaseBrowser();
         if (isLocalBind(intent)) tryShutdown();
         return super.onUnbind(intent);
     }
@@ -162,8 +166,8 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     @Override
     public void onDisconnected(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
-        if (controller.getPackageName().equals(getPackageName())) return;
-        tryShutdown();
+        if (isAppController(controller)) return;
+        releaseController(controller);
     }
 
     @Override
@@ -196,11 +200,22 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void tryShutdown() {
-        if (!hasNavigationCallback() && !hasExternalClient()) shutdown();
+        if (!hasNavigationCallback() && !hasMediaClient()) shutdown();
     }
 
-    private void releaseExternal() {
-        externalBound = false;
+    private void releaseBrowser() {
+        clients.unbind();
+        if (!hasMediaClient()) releaseMediaState();
+        else tryShutdown();
+    }
+
+    private void releaseController(@NonNull MediaSession.ControllerInfo controller) {
+        clients.disconnect(controller);
+        if (!hasMediaClient()) releaseMediaState();
+        else tryShutdown();
+    }
+
+    private void releaseMediaState() {
         saveProgress();
         BrowseTree.clear();
         tryShutdown();
@@ -244,8 +259,13 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @NonNull
     @Override
     public MediaSession.ConnectionResult onConnect(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller) {
+        clients.connect(controller, getPackageName());
         SessionCommands commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon().add(COMMAND_REPEAT).build();
         return new MediaLibrarySession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands).build();
+    }
+
+    private boolean isAppController(@NonNull MediaSession.ControllerInfo controller) {
+        return clients.isSelf(controller, getPackageName());
     }
 
     @NonNull
@@ -258,8 +278,8 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         return MediaLibrarySession.Callback.super.onCustomCommand(session, controller, customCommand, args);
     }
 
-    public boolean hasExternalClient() {
-        return externalBound;
+    public boolean hasMediaClient() {
+        return clients.hasAny();
     }
 
     public void setSessionActivity(PendingIntent pendingIntent) {
@@ -307,7 +327,10 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     public void dispatchStop() {
         if (player.getPlaybackState() == Player.STATE_IDLE) return;
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(NavigationCallback::onStop);
-        else stopAndClear();
+        else {
+            saveProgress();
+            stopAndClear();
+        }
     }
 
     public void dispatchRepeat() {
@@ -359,19 +382,19 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private void interceptItems(@NonNull List<MediaItem> items, int startIndex, long startPositionMs) {
         if (items.isEmpty()) return;
         int idx = (startIndex >= 0 && startIndex < items.size()) ? startIndex : 0;
-        interceptItem(items.get(idx), startPositionMs > 0 ? startPositionMs : 0);
+        interceptItem(items.get(idx), startPositionMs);
     }
 
     private ForwardingPlayer wrap(Player base) {
         return new ForwardingPlayer(base) {
             @Override
             public void setMediaItem(@NonNull MediaItem item) {
-                interceptItem(item, 0);
+                interceptItem(item, C.TIME_UNSET);
             }
 
             @Override
             public void setMediaItem(@NonNull MediaItem item, boolean resetPosition) {
-                interceptItem(item, 0);
+                interceptItem(item, C.TIME_UNSET);
             }
 
             @Override
@@ -381,12 +404,12 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
             @Override
             public void setMediaItems(@NonNull List<MediaItem> items) {
-                interceptItems(items, 0, 0);
+                interceptItems(items, 0, C.TIME_UNSET);
             }
 
             @Override
             public void setMediaItems(@NonNull List<MediaItem> items, boolean resetPosition) {
-                interceptItems(items, 0, 0);
+                interceptItems(items, 0, C.TIME_UNSET);
             }
 
             @Override
@@ -434,8 +457,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void startBrowse(MediaItem item, Result result, long startPositionMs) {
-        player.browse(PlaySpec.from(result, item.mediaId, item.mediaMetadata));
-        if (startPositionMs > 0) player.seekTo(startPositionMs);
+        player.browse(PlaySpec.from(result, item.mediaId, item.mediaMetadata), startPositionMs);
     }
 
     @Override
@@ -449,8 +471,13 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     @Override
-    public void onTitlesChanged() {
-        playerCallbacks.forEach(PlayerCallback::onTitlesChanged);
+    public void onDecodeChanged() {
+        playerCallbacks.forEach(PlayerCallback::onDecodeChanged);
+    }
+
+    @Override
+    public void onMediaOptionsChanged() {
+        playerCallbacks.forEach(PlayerCallback::onMediaOptionsChanged);
     }
 
     @Override
@@ -460,11 +487,31 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     @Override
     public void onPlayerRebuild(Player newPlayer) {
-        exoPlayer.removeListener(listener);
-        exoPlayer = newPlayer;
-        exoPlayer.addListener(listener);
+        sessionPlayer.removeListener(listener);
+        sessionPlayer = newPlayer;
+        sessionPlayer.addListener(listener);
         if (session != null) session.setPlayer(wrap(newPlayer));
         playerCallbacks.forEach(callback -> callback.onPlayerRebuild(newPlayer));
+    }
+
+    @Override
+    public void onDanmakuSourceChanged(Uri uri) {
+        playerCallbacks.forEach(callback -> callback.onDanmakuSourceChanged(uri));
+    }
+
+    @Override
+    public void onDanmakuConfigChanged(DanmakuConfig config) {
+        playerCallbacks.forEach(callback -> callback.onDanmakuConfigChanged(config));
+    }
+
+    @Override
+    public void onDanmakuEnabledChanged(boolean enabled) {
+        playerCallbacks.forEach(callback -> callback.onDanmakuEnabledChanged(enabled));
+    }
+
+    @Override
+    public void onDanmakuSent(String text) {
+        playerCallbacks.forEach(callback -> callback.onDanmakuSent(text));
     }
 
     private final Player.Listener listener = new Player.Listener() {
@@ -488,7 +535,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @NonNull
     @Override
     public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(@NonNull MediaLibrarySession session, @NonNull MediaSession.ControllerInfo browser, @NonNull String parentId, int page, int pageSize, @Nullable MediaLibraryService.LibraryParams params) {
-        return Task.executor().submit(() -> LibraryResult.ofItemList(BrowseTree.getChildren(parentId), params));
+        return Task.executor().submit(() -> LibraryResult.ofItemList(BrowseTree.getChildren(parentId, page, pageSize), params));
     }
 
     @NonNull
@@ -504,14 +551,16 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @NonNull
     @Override
     public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetSearchResult(@NonNull MediaLibrarySession session, @NonNull MediaSession.ControllerInfo browser, @NonNull String query, int page, int pageSize, @Nullable MediaLibraryService.LibraryParams params) {
-        return Futures.immediateFuture(LibraryResult.ofItemList(BrowseTree.getSearchResult(), params));
+        return Futures.immediateFuture(LibraryResult.ofItemList(BrowseTree.getSearchResult(query, page, pageSize), params));
     }
 
     @NonNull
     @Override
     public ListenableFuture<LibraryResult<MediaItem>> onGetItem(@NonNull MediaLibrarySession session, @NonNull MediaSession.ControllerInfo browser, @NonNull String mediaId) {
-        MediaItem item = BrowseTree.getItem(mediaId);
-        return Futures.immediateFuture(item != null ? LibraryResult.ofItem(item, null) : LibraryResult.ofError(SessionError.ERROR_BAD_VALUE));
+        return Task.executor().submit(() -> {
+            MediaItem item = BrowseTree.getItem(mediaId);
+            return item != null ? LibraryResult.ofItem(item, null) : LibraryResult.ofError(SessionError.ERROR_BAD_VALUE);
+        });
     }
 
     @NonNull
@@ -520,9 +569,10 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         saveProgress();
         return Task.executor().submit(() -> {
             List<MediaItem> resolved = mediaItems.stream().map(BrowseTree::resolveOrKeep).toList();
-            int index = resolved.isEmpty() ? 0 : Math.min(Math.max(startIndex, 0), resolved.size() - 1);
-            long position = BrowseTree.consumeResumePosition();
-            return new MediaSession.MediaItemsWithStartPosition(resolved, index, position);
+            int index = resolved.isEmpty() ? 0 : Math.clamp(startIndex, 0, resolved.size() - 1);
+            long resumePositionMs = BrowseTree.consumeResumePosition();
+            long positionMs = startPositionMs != C.TIME_UNSET ? startPositionMs : resumePositionMs;
+            return new MediaSession.MediaItemsWithStartPosition(resolved, index, positionMs);
         });
     }
 
@@ -534,13 +584,28 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         default void onTracksChanged() {
         }
 
-        default void onTitlesChanged() {
+        default void onDecodeChanged() {
+        }
+
+        default void onMediaOptionsChanged() {
         }
 
         default void onError(String msg) {
         }
 
         default void onPlayerRebuild(Player player) {
+        }
+
+        default void onDanmakuSourceChanged(Uri uri) {
+        }
+
+        default void onDanmakuConfigChanged(DanmakuConfig config) {
+        }
+
+        default void onDanmakuEnabledChanged(boolean enabled) {
+        }
+
+        default void onDanmakuSent(String text) {
         }
     }
 

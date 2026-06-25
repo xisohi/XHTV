@@ -55,10 +55,6 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         activity.startActivity(new Intent(activity, SettingActivity.class));
     }
 
-    private String getSwitch(boolean value) {
-        return getString(value ? R.string.setting_on : R.string.setting_off);
-    }
-
     private int getDohIndex() {
         return Math.max(0, VodConfig.get().getDoh().indexOf(Doh.objectFrom(Setting.getDoh())));
     }
@@ -87,7 +83,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     private void setOtherText() {
         mBinding.dohText.setText(getDohList()[getDohIndex()]);
-        mBinding.incognitoText.setText(getSwitch(Setting.isIncognito()));
+        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
     }
 
@@ -254,7 +250,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     private void setIncognito(View view) {
         Setting.putIncognito(!Setting.isIncognito());
-        mBinding.incognitoText.setText(getSwitch(Setting.isIncognito()));
+        mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
     }
 
     private void setSize(View view) {

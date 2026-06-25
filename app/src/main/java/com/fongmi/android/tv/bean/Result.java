@@ -252,7 +252,8 @@ public class Result implements Parcelable {
     }
 
     public List<Danmaku> getDanmaku() {
-        return !DanmakuSetting.isLoad() || danmaku == null ? new ArrayList<>() : danmaku;
+        if (!DanmakuSetting.isLoad()) return new ArrayList<>();
+        return danmaku = danmaku == null ? new ArrayList<>() : danmaku;
     }
 
     public String getFormat() {
@@ -281,6 +282,10 @@ public class Result implements Parcelable {
 
     public Long getPosition() {
         return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
     }
 
     public Integer getPageCount() {
@@ -327,7 +332,7 @@ public class Result implements Parcelable {
         return !getDesc().isEmpty();
     }
 
-    public boolean shouldUseParse() {
+    public boolean isUseParse() {
         if (!VodConfig.hasParse()) return false;
         return (getPlayUrl().isEmpty() && VodConfig.get().getFlags().contains(getFlag())) || getJx() == 1;
     }

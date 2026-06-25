@@ -41,7 +41,7 @@
         <item name="android:background">@drawable/selector_chip</item>
         <item name="android:focusable">true</item>
         <item name="android:focusableInTouchMode">true</item>
-        <item name="android:nextFocusDown">@id/timeBar</item>
+        <item name="android:nextFocusUp">@id/exo_progress</item>
         <item name="android:textColor">@color/text</item>
         <item name="android:textSize">14sp</item>
     </style>

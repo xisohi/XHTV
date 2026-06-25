@@ -10,22 +10,11 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.exception.ExtractException;
-import com.fongmi.android.tv.utils.Task;
-import com.google.common.util.concurrent.FluentFuture;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.github.catvod.utils.Trans;
 
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SiteViewModel extends ViewModel {
 
@@ -34,21 +23,16 @@ public class SiteViewModel extends ViewModel {
     private final MutableLiveData<Result> search;
     private final MutableLiveData<Result> action;
 
-    private final Map<TaskType, ListenableFuture<?>> futures;
-    private final Map<TaskType, AtomicInteger> taskIds;
-    private final List<Future<?>> searchFuture;
-    private final AtomicInteger searchEpoch;
+    private final ViewModelTaskRunner<TaskType> tasks;
+    private final ViewModelSearchRunner searches;
 
     public SiteViewModel() {
         result = new MutableLiveData<>();
         player = new MutableLiveData<>();
         search = new MutableLiveData<>();
         action = new MutableLiveData<>();
-        searchEpoch = new AtomicInteger(0);
-        searchFuture = new CopyOnWriteArrayList<>();
-        futures = new EnumMap<>(TaskType.class);
-        taskIds = new EnumMap<>(TaskType.class);
-        for (TaskType type : TaskType.values()) taskIds.put(type, new AtomicInteger(0));
+        tasks = new ViewModelTaskRunner<>(TaskType.class);
+        searches = new ViewModelSearchRunner();
     }
 
     public LiveData<Result> getResult() {
@@ -100,51 +84,48 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void searchContent(List<Site> sites, String keyword, boolean quick) {
-        int epoch = stopSearch();
-        sites.forEach(site -> {
-            FluentFuture<Result> future = FluentFuture.from(Task.largeExecutor().submit(SearchTask.create(site, keyword, quick))).withTimeout(Constant.TIMEOUT_SEARCH, TimeUnit.MILLISECONDS, Task.scheduler());
-            searchFuture.add(future);
-            future.addCallback(Task.callback(
-                    result -> {
-                        if (searchEpoch.get() == epoch) search.postValue(result);
-                    }
-            ), MoreExecutors.directExecutor());
-        });
+        searches.start(sites, site -> SearchTask.create(site, keyword, quick), search::postValue);
     }
 
     private void execute(TaskType type, MutableLiveData<Result> liveData, Callable<Result> callable) {
-        AtomicInteger taskId = Objects.requireNonNull(taskIds.get(type));
-        int currentId = taskId.incrementAndGet();
-        ListenableFuture<?> old = futures.get(type);
-        if (old != null) old.cancel(true);
-        FluentFuture<Result> future = FluentFuture.from(Task.executor().submit(callable)).withTimeout(Constant.TIMEOUT_VOD, TimeUnit.MILLISECONDS, Task.scheduler());
-        futures.put(type, future);
-        future.addCallback(Task.callback(
-                result -> {
-                    if (taskId.get() == currentId) liveData.postValue(result);
-                },
-                error -> {
-                    if (taskId.get() != currentId) return;
-                    if (error instanceof CancellationException) return;
-                    if (error instanceof ExtractException) liveData.postValue(Result.error(error.getMessage()));
-                    else liveData.postValue(Result.empty());
-                    error.printStackTrace();
-                }
-        ), MoreExecutors.directExecutor());
+        tasks.execute(type, Constant.TIMEOUT_VOD, callable, liveData::postValue, error -> {
+            if (error instanceof ExtractException) liveData.postValue(Result.error(error.getMessage()));
+            else liveData.postValue(Result.empty());
+            error.printStackTrace();
+        });
     }
 
-    public int stopSearch() {
-        int epoch = searchEpoch.incrementAndGet();
-        searchFuture.forEach(future -> future.cancel(true));
-        searchFuture.clear();
-        return epoch;
+    public void stopSearch() {
+        searches.stop();
     }
 
     @Override
     protected void onCleared() {
-        super.onCleared();
         stopSearch();
-        futures.values().forEach(future -> future.cancel(true));
+        tasks.cancelAll();
+    }
+
+    private record SearchTask(Site site, String keyword, boolean quick, String page) implements Callable<Result> {
+
+        private static final String FIRST_PAGE = "1";
+
+        SearchTask {
+            keyword = Trans.t2s(keyword);
+        }
+
+        private static SearchTask create(Site site, String keyword, boolean quick) {
+            return create(site, keyword, quick, FIRST_PAGE);
+        }
+
+        private static SearchTask create(Site site, String keyword, boolean quick, String page) {
+            return new SearchTask(site, keyword, quick, page);
+        }
+
+        @Override
+        public Result call() throws Exception {
+            if (quick && !site.isQuickSearch()) return Result.empty();
+            return SiteApi.searchContent(site, keyword, quick, page);
+        }
     }
 
     private enum TaskType {RESULT, PLAYER, ACTION}

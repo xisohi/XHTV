@@ -15,8 +15,6 @@ import java.util.function.LongConsumer;
 
 final class OffsetPanel {
 
-    private static final long OFFSET_STEP_MS = 100;
-
     private final DialogOffsetBinding binding;
     private final PlayerManager player;
     private final int type;
@@ -55,16 +53,25 @@ final class OffsetPanel {
     }
 
     private void setupOffset(Slider slider, TextView label, long valueMs, LongConsumer setter) {
-        float clamped = Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), valueMs));
+        float clamped = snapToStep(slider, valueMs);
         slider.clearOnChangeListeners();
         slider.setLabelFormatter(this::format);
         slider.setValue(clamped);
         label.setText(format(clamped));
         slider.addOnChangeListener((source, value, fromUser) -> {
             if (!fromUser) return;
-            setter.accept(Math.round(value / OFFSET_STEP_MS) * OFFSET_STEP_MS);
-            label.setText(format(value));
+            float snapped = snapToStep(source, value);
+            setter.accept(Math.round(snapped));
+            label.setText(format(snapped));
         });
+    }
+
+    private float snapToStep(Slider slider, float value) {
+        float step = slider.getStepSize();
+        float clamped = Math.clamp(value, slider.getValueFrom(), slider.getValueTo());
+        if (step <= 0) return clamped;
+        float snapped = slider.getValueFrom() + Math.round((clamped - slider.getValueFrom()) / step) * step;
+        return Math.clamp(snapped, slider.getValueFrom(), slider.getValueTo());
     }
 
     private String format(float value) {

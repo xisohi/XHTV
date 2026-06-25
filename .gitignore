@@ -8,3 +8,4 @@
 *.properties
 lib-*.aar
 /Release
+/docs
