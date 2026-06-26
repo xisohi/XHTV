@@ -209,7 +209,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
         mBinding.control.action.text.setOnLongClickListener(view -> onTextLong());
-        mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
         mBinding.control.action.getRoot().setOnTouchListener(this::onActionTouch);
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
     }
@@ -409,12 +408,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private void onSpeed() {
         PlaybackAction.addSpeed(player(), mBinding.control.action.speed);
         setR1Callback();
-    }
-
-    private boolean onSpeedLong() {
-        PlaybackAction.toggleSpeed(player(), mBinding.control.action.speed);
-        setR1Callback();
-        return true;
     }
 
     private void onConfig() {

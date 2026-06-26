@@ -42,6 +42,7 @@ public class DanmakuSetting {
 
     public static void putLoad(boolean danmakuLoad) {
         Prefers.put("danmaku_load", danmakuLoad);
+        if (danmakuLoad) putShow(true);
     }
 
     public static boolean isAuto() {
@@ -69,7 +70,7 @@ public class DanmakuSetting {
     }
 
     public static boolean isShow() {
-        return Prefers.getBoolean("danmaku_show");
+        return Prefers.getBoolean("danmaku_show", true);
     }
 
     public static void putShow(boolean danmakuShow) {

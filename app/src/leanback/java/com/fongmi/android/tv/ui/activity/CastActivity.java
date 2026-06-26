@@ -129,7 +129,6 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
-        mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
     }
 
@@ -138,7 +137,6 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         setScale(scale = PlayerSetting.getScale());
         setActionFocusBoundary(mBinding.control.action.getRoot());
         PlayerEngineDialog.setText(mBinding.control.action.player);
-        mBinding.control.action.reset.setText(ResUtil.getStringArray(R.array.select_reset)[0]);
     }
 
     private String getName() {
@@ -196,11 +194,6 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     private void onSpeedSub() {
         mBinding.control.action.speed.setText(player().subSpeed(0.25f));
-    }
-
-    private boolean onSpeedLong() {
-        mBinding.control.action.speed.setText(player().toggleSpeed());
-        return true;
     }
 
     private void onReset() {

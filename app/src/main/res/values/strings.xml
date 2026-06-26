@@ -40,6 +40,7 @@
     <string name="play_backward">←</string>
     <string name="play_speed">1.00</string>
     <string name="play_reset">Reset</string>
+    <string name="play_replay">Replay</string>
     <string name="play_decode">Hard</string>
     <string name="play_timer">Timer</string>
     <string name="play_edition">Title</string>
@@ -262,11 +263,6 @@
         <item>4:3</item>
         <item>Fill</item>
         <item>Zoom</item>
-    </string-array>
-
-    <string-array name="select_reset">
-        <item>Reset</item>
-        <item>Replay</item>
     </string-array>
 
     <string-array name="select_caption">
