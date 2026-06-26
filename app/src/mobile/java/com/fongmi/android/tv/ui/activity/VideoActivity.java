@@ -66,7 +66,6 @@ import com.fongmi.android.tv.player.util.PlayerHelper;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
-import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
 import com.fongmi.android.tv.ui.adapter.FlagAdapter;
 import com.fongmi.android.tv.ui.adapter.QualityAdapter;
@@ -230,10 +229,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         mBinding.control.action.scale.setText(ResUtil.getStringArray(R.array.select_scale)[scale]);
     }
 
-    private boolean isReplay() {
-        return Setting.getReset() == 1;
-    }
-
     @Override
     public boolean isFromCollect() {
         return getIntent().getBooleanExtra("collect", false);
@@ -346,6 +341,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
+        mBinding.control.action.replay.setOnClickListener(view -> onReplay());
         mBinding.control.action.parse.setOnClickListener(view -> onParse());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
@@ -357,8 +353,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         mBinding.control.action.chapter.setOnClickListener(view -> onChapter());
         mBinding.control.action.episodes.setOnClickListener(view -> onEpisodes());
         mBinding.control.action.text.setOnLongClickListener(view -> onTextLong());
-        mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
-        mBinding.control.action.reset.setOnLongClickListener(view -> onResetToggle());
         mBinding.control.action.ending.setOnLongClickListener(view -> onEndingReset());
         mBinding.control.action.opening.setOnLongClickListener(view -> onOpeningReset());
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
@@ -393,7 +387,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     private void setVideoView() {
         PlayerEngineDialog.setText(mBinding.control.action.player);
         mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
-        mBinding.control.action.reset.setText(ResUtil.getStringArray(R.array.select_reset)[Setting.getReset()]);
         mBinding.video.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> mPiP.update(this, view));
     }
 
@@ -626,9 +619,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void renderSources(List<Vod> items) {
-        mQuickAdapter.clear();
-        mBinding.quick.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mQuickAdapter.addAll(items);
+        mBinding.quick.setVisibility(mQuickAdapter.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     @Override
@@ -948,15 +940,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         setR1Callback();
     }
 
-    private boolean onSpeedLong() {
-        mVod.setSpeed(PlaybackAction.toggleSpeed(player(), mBinding.control.action.speed));
-        setR1Callback();
-        return true;
-    }
-
     private void onReset() {
-        if (isReplay()) onReplay();
-        else onRefresh();
+        onRefresh();
     }
 
     private void onParse() {
@@ -970,12 +955,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     private void onRefresh() {
         mVod.refresh();
-    }
-
-    private boolean onResetToggle() {
-        Setting.putReset(Math.abs(Setting.getReset() - 1));
-        mBinding.control.action.reset.setText(ResUtil.getStringArray(R.array.select_reset)[Setting.getReset()]);
-        return true;
     }
 
     private void onDecode() {

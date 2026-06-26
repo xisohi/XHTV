@@ -46,6 +46,10 @@ public class QuickAdapter extends RecyclerView.Adapter<QuickAdapter.ViewHolder> 
         return mItems.get(position);
     }
 
+    public boolean isEmpty() {
+        return getItemCount() == 0;
+    }
+
     @Override
     public int getItemCount() {
         return mItems.size();

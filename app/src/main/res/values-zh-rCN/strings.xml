@@ -40,6 +40,7 @@
     <string name="play_backward">←</string>
     <string name="play_speed">1.00</string>
     <string name="play_reset">刷新</string>
+    <string name="play_replay">重播</string>
     <string name="play_decode">硬解</string>
     <string name="play_timer">定时</string>
     <string name="play_edition">标题</string>
@@ -251,11 +252,6 @@
         <item>4:3</item>
         <item>填充</item>
         <item>裁剪</item>
-    </string-array>
-
-    <string-array name="select_reset">
-        <item>刷新</item>
-        <item>重播</item>
     </string-array>
 
     <string-array name="select_caption">

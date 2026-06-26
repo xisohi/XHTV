@@ -198,7 +198,6 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.control.action.change.setOnClickListener(view -> onChange());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
-        mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
         mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
         mBinding.group.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
@@ -402,11 +401,6 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void onSpeedSub() {
         PlaybackAction.subSpeed(player(), mBinding.control.action.speed, 0.25f);
-    }
-
-    private boolean onSpeedLong() {
-        PlaybackAction.toggleSpeed(player(), mBinding.control.action.speed);
-        return true;
     }
 
     private void onConfig() {
