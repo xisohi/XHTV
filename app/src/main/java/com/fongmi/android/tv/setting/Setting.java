@@ -1,11 +1,5 @@
 package com.fongmi.android.tv.setting;
 
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.Settings;
-
-import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.github.catvod.utils.Prefers;
@@ -16,8 +10,6 @@ public class Setting {
     private static final int MAX_WALL = 4;
     private static final int MIN_WALL_TYPE = 0;
     private static final int MAX_WALL_TYPE = 2;
-    private static final int MIN_RESET = 0;
-    private static final int MAX_RESET = 1;
     private static final int MIN_SITE_MODE = 0;
     private static final int MAX_SITE_MODE = 1;
     private static final int MIN_SYNC_MODE = 0;
@@ -97,14 +89,6 @@ public class Setting {
         return color != 0 ? color : getWallColor();
     }
 
-    public static int getReset() {
-        return Math.clamp(Prefers.getInt("reset", 0), MIN_RESET, MAX_RESET);
-    }
-
-    public static void putReset(int reset) {
-        Prefers.put("reset", Math.clamp(reset, MIN_RESET, MAX_RESET));
-    }
-
     public static int getSiteMode() {
         return Math.clamp(Prefers.getInt("site_mode"), MIN_SITE_MODE, MAX_SITE_MODE);
     }
@@ -151,10 +135,5 @@ public class Setting {
 
     public static void putZhuyin(boolean zhuyin) {
         Prefers.put("zhuyin", zhuyin);
-    }
-
-    public static boolean hasFileManager() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false;
-        return new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + App.get().getPackageName())).resolveActivity(App.get().getPackageManager()) != null || new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).resolveActivity(App.get().getPackageManager()) != null;
     }
 }
