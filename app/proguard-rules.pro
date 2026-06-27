@@ -25,6 +25,14 @@
 -keep class okio.** { *; }
 -keep class okhttp3.** { *; }
 
+# SLF4J
+-keeppackagenames org.slf4j.**
+-keep class org.slf4j.** { *; }
+
+# Kotlin
+-keeppackagenames kotlin.**
+-keep class kotlin.** { *; }
+
 # CatVod
 -keep class com.github.catvod.Proxy { *; }
 -keep class com.github.catvod.crawler.** { *; }
@@ -65,5 +73,12 @@
 # XunLei
 -keep class com.xunlei.downloadlib.** { *; }
 
-# Zxing
--keep class com.google.zxing.** { *; }
+# Zxing QRCode ABI
+-keep class com.google.zxing.BarcodeFormat { *; }
+-keep class com.google.zxing.EncodeHintType { *; }
+-keep class com.google.zxing.MultiFormatWriter { *; }
+-keep class com.google.zxing.Writer { *; }
+-keep class com.google.zxing.WriterException { *; }
+-keep class com.google.zxing.common.BitMatrix { *; }
+-keep class com.google.zxing.qrcode.QRCodeWriter { *; }
+-keep class com.google.zxing.qrcode.decoder.ErrorCorrectionLevel { *; }
