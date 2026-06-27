@@ -143,7 +143,6 @@ dependencies {
     implementation project(':media-lib-database')
     implementation project(':media-lib-datasource')
     implementation project(':media-lib-datasource-okhttp')
-    implementation project(':media-lib-datasource-rtmp')
     implementation project(':media-lib-decoder')
     implementation project(':media-lib-decoder-av1')
     implementation project(':media-lib-decoder-ffmpeg')
