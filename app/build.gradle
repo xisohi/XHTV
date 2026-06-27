@@ -149,7 +149,6 @@ dependencies {
     implementation project(':media-lib-decoder-ffmpeg')
     implementation project(':media-lib-decoder-flac')
     implementation project(':media-lib-decoder-iamf')
-    implementation project(':media-lib-decoder-midi')
     implementation project(':media-lib-decoder-mpegh')
     implementation project(':media-lib-decoder-opus')
     implementation project(':media-lib-decoder-vp9')
