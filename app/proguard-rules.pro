@@ -74,11 +74,9 @@
 -keep class com.xunlei.downloadlib.** { *; }
 
 # Zxing QRCode ABI
--keep class com.google.zxing.BarcodeFormat { *; }
--keep class com.google.zxing.EncodeHintType { *; }
--keep class com.google.zxing.MultiFormatWriter { *; }
--keep class com.google.zxing.Writer { *; }
--keep class com.google.zxing.WriterException { *; }
+-keep class com.google.zxing.* { *; }
 -keep class com.google.zxing.common.BitMatrix { *; }
+-keep class com.google.zxing.common.HybridBinarizer { *; }
+-keep class com.google.zxing.qrcode.QRCodeReader { *; }
 -keep class com.google.zxing.qrcode.QRCodeWriter { *; }
 -keep class com.google.zxing.qrcode.decoder.ErrorCorrectionLevel { *; }
