@@ -257,8 +257,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         super.onNewIntent(intent);
         String id = Objects.toString(intent.getStringExtra("id"), "");
         if (TextUtils.isEmpty(id) || id.equals(oldId)) return;
+        saveHistory(false);
         getIntent().putExtras(intent);
-        mVod.saveHistory();
         mVod.reset();
         checkId();
     }
@@ -1071,12 +1071,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         setR2Callback();
     }
 
-    private void saveHistory() {
-        if (mVod != null) mVod.saveHistory();
-    }
-
     private void saveHistory(boolean exit) {
-        if (mVod != null) mVod.saveHistory(exit);
+        boolean owner = service() != null && isOwner();
+        long position = owner ? player().getPosition() : C.TIME_UNSET;
+        long duration = owner ? player().getDuration() : C.TIME_UNSET;
+        if (mVod != null) mVod.saveHistory(exit, System.currentTimeMillis(), position, duration);
     }
 
     private void syncHistory() {

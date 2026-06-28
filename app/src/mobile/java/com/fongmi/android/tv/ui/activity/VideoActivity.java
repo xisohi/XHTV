@@ -279,8 +279,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         String id = Objects.toString(intent.getStringExtra("id"), "");
         if (TextUtils.isEmpty(id) || id.equals(oldId)) return;
         mBinding.swipeLayout.setRefreshing(true);
+        saveHistory(false);
         getIntent().putExtras(intent);
-        mVod.saveHistory();
         mVod.reset();
         setOrient();
         checkId();
@@ -289,7 +289,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
-        setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
         ViewCompat.setOnApplyWindowInsetsListener(mBinding.getRoot(), (v, insets) -> setStatusBar(insets));
         mKeyDown = CustomKeyDown.create(this, mBinding.player);
         mFrameParams = mBinding.video.getLayoutParams();
@@ -879,7 +878,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     private void onLock() {
         setLock(!isLock());
-        setPhoneOrientation(getLockOrient());
+        setRequestedOrientation(getLockOrient());
         mKeyDown.setLock(isLock());
         checkLockImg();
         showControl();
@@ -888,7 +887,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     private void onRotate() {
         setR1Callback();
         setRotate(!isRotate());
-        setPhoneOrientation(ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        setRequestedOrientation(ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
     }
 
     private void onTrack(View view) {
@@ -1035,7 +1034,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         setFullscreen(true);
         if (isLand() && !player().isPortrait()) setTransition();
         mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
-        setPhoneOrientation(player().isPortrait() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        setRequestedOrientation(player().isPortrait() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         mBinding.control.title.setVisibility(View.VISIBLE);
         setRotate(player().isPortrait());
         mKeyDown.resetScale();
@@ -1047,7 +1046,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         if (!isFullscreen()) return;
         setFullscreen(false);
         if (isLand() && !player().isPortrait()) setTransition();
-        setPhoneOrientation(isPort() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        setRequestedOrientation(isPort() ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
         mBinding.episode.postDelayed(() -> mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition()), 100);
         mBinding.control.title.setVisibility(View.INVISIBLE);
         mBinding.video.setLayoutParams(mFrameParams);
@@ -1141,9 +1140,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     private void setOrient() {
-        if (!isAutoRotate()) return;
-        if (isPort()) setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-        else if (isLand()) setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+        if (isPort() && isAutoRotate()) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        if (isLand() && isAutoRotate()) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
     }
 
     private void setR1Callback() {
@@ -1176,12 +1174,11 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         });
     }
 
-    private void saveHistory() {
-        if (mVod != null) mVod.saveHistory();
-    }
-
     private void saveHistory(boolean exit) {
-        if (mVod != null) mVod.saveHistory(exit);
+        boolean owner = service() != null && isOwner();
+        long position = owner ? player().getPosition() : C.TIME_UNSET;
+        long duration = owner ? player().getDuration() : C.TIME_UNSET;
+        if (mVod != null) mVod.saveHistory(exit, System.currentTimeMillis(), position, duration);
     }
 
     private void syncHistory() {
@@ -1382,10 +1379,10 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     private void checkOrientation() {
         if (isFullscreen() && !isRotate() && player().isPortrait()) {
-            setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
             setRotate(true);
         } else if (isFullscreen() && isRotate() && player().isLandscape()) {
-            setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
             setRotate(false);
         }
     }

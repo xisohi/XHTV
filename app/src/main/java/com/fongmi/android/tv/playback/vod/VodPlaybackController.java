@@ -19,6 +19,7 @@ public class VodPlaybackController {
     private final VodFallbackPolicy fallbackPolicy;
     private final VodPlaybackState state;
     private final VodPlaybackHost host;
+    private History lastHistory;
 
     public VodPlaybackController(VodPlaybackHost host, VodPlaybackState state) {
         this.historyPolicy = new VodHistoryPolicy();
@@ -147,7 +148,7 @@ public class VodPlaybackController {
     private void switchSource(Vod item, boolean autoFallback) {
         state.setAutoFallback(autoFallback);
         state.clearPlayRequest();
-        saveHistory();
+        saveCurrentHistory();
         host.prepareSource(item);
         requestDetail();
     }
@@ -176,7 +177,7 @@ public class VodPlaybackController {
     }
 
     public void refresh() {
-        saveHistory();
+        saveCurrentHistory();
         host.stopPlaybackForRefresh();
         if (!state.hasFlags() || !state.hasEpisode()) return;
         requestPlayer(state.getFlag(), state.getEpisode());
@@ -212,26 +213,39 @@ public class VodPlaybackController {
         host.renderReverseEpisodes(state.getFlag().getEpisodes(), scroll);
     }
 
-    public void saveHistory() {
-        historyPolicy.save(state.getHistory());
+    private void saveCurrentHistory() {
+        historyPolicy.save(currentHistory());
     }
 
-    public void saveHistory(boolean exit) {
-        historyPolicy.save(state.getHistory(), exit);
+    public void saveHistory(boolean exit, long time, long position, long duration) {
+        History history = exit ? historyForExit() : currentHistory();
+        if (position > 0 && duration > 0) historyPolicy.updateTime(history, time, position, duration);
+        historyPolicy.save(history, exit);
     }
 
     public void syncHistory() {
-        historyPolicy.sync(state.getHistory());
+        historyPolicy.sync(currentHistory());
     }
 
     public void onTimeChanged(long time, long position, long duration) {
-        historyPolicy.updateTime(state.getHistory(), time, position, duration);
-        History history = state.getHistory();
+        History history = currentHistory();
+        historyPolicy.updateTime(history, time, position, duration);
         if (history != null && history.getEnding() > 0 && history.getEnding() + position >= duration) nextEpisode(false);
     }
 
     public long startPositionMs() {
         return historyPolicy.startPositionMs(state.getHistory());
+    }
+
+    private History currentHistory() {
+        History history = state.getHistory();
+        if (history != null) lastHistory = history;
+        return history;
+    }
+
+    private History historyForExit() {
+        History history = currentHistory();
+        return history == null ? lastHistory : history;
     }
 
     public void setOpening(long opening) {
@@ -275,6 +289,7 @@ public class VodPlaybackController {
         item.checkName(host.getVodName());
         state.setFlags(item.getFlags());
         state.setHistory(historyPolicy.findOrCreate(host.getHistoryKey(), host.getVodMark(), item));
+        lastHistory = state.getHistory();
         host.renderDetail(item, state.getHistory());
         host.renderFlags(item.getFlags());
         host.renderHistory(state.getHistory());

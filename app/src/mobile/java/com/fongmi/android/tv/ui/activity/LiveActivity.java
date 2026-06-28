@@ -168,7 +168,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
-        setPhoneOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         mKeyDown = CustomKeyDown.create(this, mBinding.player);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
@@ -365,7 +364,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     private void onLock() {
         setLock(!isLock());
-        setPhoneOrientation(getLockOrient());
+        setRequestedOrientation(getLockOrient());
         mKeyDown.setLock(isLock());
         checkLockImg();
         showControl();
@@ -374,7 +373,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private void onRotate() {
         setR1Callback();
         setRotate(!isRotate());
-        setPhoneOrientation(ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        setRequestedOrientation(ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
     }
 
     private void checkPlay() {

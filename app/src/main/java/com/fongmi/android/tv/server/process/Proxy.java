@@ -39,18 +39,10 @@ public class Proxy implements Process {
     private static Response createResponse(Object[] rs) {
         if (rs == null || rs.length == 0) return Nano.error(INVALID_RESPONSE);
         if (rs[0] instanceof Response response) return response;
-        if (rs.length < 3 || !(rs[0] instanceof Integer code) || !(rs[2] instanceof InputStream stream)) return Nano.error(INVALID_RESPONSE);
-        Response response = NanoHTTPD.newChunkedResponse(toStatus(code), Objects.toString(rs[1], null), stream);
-        if (rs.length > 3) addHeaders(response, rs[3]);
+        if (rs.length < 3) return Nano.error(INVALID_RESPONSE);
+        Response response = NanoHTTPD.newChunkedResponse(toStatus((Integer) rs[0]), (String) rs[1], (InputStream) rs[2]);
+        if (rs.length > 3 && rs[3] != null) for (Map.Entry<String, String> entry : ((Map<String, String>) rs[3]).entrySet()) response.addHeader(entry.getKey(), entry.getValue());
         return response;
-    }
-
-    private static void addHeaders(Response response, Object headers) {
-        if (!(headers instanceof Map<?, ?> map)) return;
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (entry.getKey() == null || entry.getValue() == null) continue;
-            response.addHeader(entry.getKey().toString(), entry.getValue().toString());
-        }
     }
 
     private static IStatus toStatus(int code) {

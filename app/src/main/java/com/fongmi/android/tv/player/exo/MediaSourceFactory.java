@@ -15,7 +15,6 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor;
 import androidx.media3.datasource.cache.SimpleCache;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider;
-import androidx.media3.exoplayer.source.ConcatenatingMediaSource2;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy;
@@ -26,7 +25,6 @@ import androidx.media3.extractor.ts.TsExtractor;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.utils.FileUtil;
-import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 
@@ -36,10 +34,6 @@ import java.util.Map;
 public class MediaSourceFactory implements MediaSource.Factory {
 
     private static final int CACHE_SPACE_PERCENT = 80;
-    private static final String CONCAT_SOURCE_SEPARATOR = "***";
-    private static final String CONCAT_SOURCE_SEPARATOR_REGEX = "\\*\\*\\*";
-    private static final String CONCAT_DURATION_SEPARATOR = "|||";
-    private static final String CONCAT_DURATION_SEPARATOR_REGEX = "\\|\\|\\|";
 
     private static StandaloneDatabaseProvider databaseProvider;
     private static Cache cache;
@@ -77,10 +71,6 @@ public class MediaSourceFactory implements MediaSource.Factory {
         return Math.min(PreloadSetting.getPreloadSizeBytes(), storageBudget);
     }
 
-    static boolean isConcatenatingUrl(String url) {
-        return url != null && url.contains(CONCAT_SOURCE_SEPARATOR) && url.contains(CONCAT_DURATION_SEPARATOR);
-    }
-
     @NonNull
     @Override
     public MediaSource.Factory setDrmSessionManagerProvider(@NonNull DrmSessionManagerProvider drmSessionManagerProvider) {
@@ -103,18 +93,7 @@ public class MediaSourceFactory implements MediaSource.Factory {
     @Override
     public MediaSource createMediaSource(@NonNull MediaItem mediaItem) {
         getHttpDataSourceFactory().setDefaultRequestProperties(ExoUtil.extractHeaders(mediaItem));
-        String url = mediaItem.requestMetadata.mediaUri != null ? mediaItem.requestMetadata.mediaUri.toString() : "";
-        if (isConcatenatingUrl(url)) return createConcatenatingMediaSource(mediaItem, url);
-        else return defaultMediaSourceFactory.createMediaSource(mediaItem);
-    }
-
-    private MediaSource createConcatenatingMediaSource(MediaItem mediaItem, String url) {
-        ConcatenatingMediaSource2.Builder builder = new ConcatenatingMediaSource2.Builder();
-        for (String split : url.split(CONCAT_SOURCE_SEPARATOR_REGEX)) {
-            String[] info = split.split(CONCAT_DURATION_SEPARATOR_REGEX);
-            if (info.length >= 2) builder.add(defaultMediaSourceFactory.createMediaSource(mediaItem.buildUpon().setUri(UrlUtil.uri(info[0])).build()), Long.parseLong(info[1]));
-        }
-        return builder.build();
+        return defaultMediaSourceFactory.createMediaSource(mediaItem);
     }
 
     private ExtractorsFactory getExtractorsFactory() {
@@ -123,7 +102,7 @@ public class MediaSourceFactory implements MediaSource.Factory {
     }
 
     private DataSource.Factory getDataSourceFactory() {
-        if (dataSourceFactory == null) dataSourceFactory = getCacheDataSource(new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory()));
+        if (dataSourceFactory == null) dataSourceFactory = () -> getCacheDataSource(new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory())).createDataSource();
         return dataSourceFactory;
     }
 
