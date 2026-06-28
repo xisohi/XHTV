@@ -175,4 +175,12 @@ public class PlayerSetting {
     public static void putPreferAAC(boolean preferAAC) {
         Prefers.put("prefer_aac", preferAAC);
     }
+
+    public static boolean isDv7HevcFallback() {
+        return Prefers.getBoolean("dv7_hevc_fallback");
+    }
+
+    public static void putDv7HevcFallback(boolean fallback) {
+        Prefers.put("dv7_hevc_fallback", fallback);
+    }
 }

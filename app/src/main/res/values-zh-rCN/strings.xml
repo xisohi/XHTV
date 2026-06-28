@@ -159,6 +159,7 @@
     <string name="player_audio_decode">音频软解</string>
     <string name="player_video_decode">视频软解</string>
     <string name="player_aac_track">AAC优先</string>
+    <string name="player_dv7_fallback">DV7回退</string>
     <string name="player_adblock">智能去广</string>
     <string name="player_tunnel">隧道模式</string>
     <string name="player_speed">长按倍速</string>
