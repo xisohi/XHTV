@@ -60,7 +60,8 @@ public class LiveApi {
         try {
             EpgParser.start(item, url);
             return true;
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }

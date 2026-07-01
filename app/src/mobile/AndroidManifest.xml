@@ -8,15 +8,15 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <supports-screens
+        android:anyDensity="true"
+        android:resizeable="true"
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true" />
+
     <application>
-
-        <property
-            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESIZEABLE_ACTIVITY_OVERRIDES"
-            android:value="false" />
-
-        <property
-            android:name="android.window.PROPERTY_COMPAT_ALLOW_ORIENTATION_OVERRIDE"
-            android:value="false" />
 
         <activity
             android:name=".ui.activity.HomeActivity"
@@ -25,21 +25,26 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Splash"
             android:windowSoftInputMode="adjustPan">
+
+            <meta-data
+                android:name="android.app.searchable"
+                android:resource="@xml/searchable" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>
-            <meta-data
-                android:name="android.app.searchable"
-                android:resource="@xml/searchable" />
+
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -53,6 +58,7 @@
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="application/x-bittorrent" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -67,6 +73,7 @@
                 <data android:mimeType="video/*" />
                 <data android:mimeType="audio/*" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -107,6 +114,7 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:parentActivityName=".ui.activity.HomeActivity"
+            android:screenOrientation="sensorLandscape"
             android:supportsPictureInPicture="true" />
 
         <activity

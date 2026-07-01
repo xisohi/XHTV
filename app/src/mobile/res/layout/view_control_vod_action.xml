@@ -14,14 +14,9 @@
         android:orientation="horizontal">
 
         <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/player"
+            android:id="@+id/episodes"
             style="@style/Control"
-            android:text="@string/player_engine" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/decode"
-            style="@style/Control"
-            android:text="@string/play_decode" />
+            android:text="@string/detail_episode" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/parse"
@@ -31,15 +26,14 @@
             tools:visibility="visible" />
 
         <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/speed"
+            android:id="@+id/player"
             style="@style/Control"
-            android:fontFeatureSettings="tnum"
-            android:text="@string/play_speed" />
+            android:text="@string/play_exo" />
 
         <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/scale"
+            android:id="@+id/decode"
             style="@style/Control"
-            android:text="@string/play_scale" />
+            android:text="@string/play_decode" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/reset"
@@ -55,6 +49,22 @@
             android:id="@+id/repeat"
             style="@style/Control"
             android:text="@string/play_repeat" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/speed"
+            style="@style/Control"
+            android:fontFeatureSettings="tnum"
+            android:text="@string/play_speed" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/scale"
+            style="@style/Control"
+            android:text="@string/play_scale" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/text"
@@ -73,16 +83,6 @@
             style="@style/Control"
             android:tag="2"
             android:text="@string/play_track_video" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/opening"
-            style="@style/Control"
-            android:text="@string/play_op" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/ending"
-            style="@style/Control"
-            android:text="@string/play_ed" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/danmaku"
@@ -106,9 +106,14 @@
             tools:visibility="visible" />
 
         <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/episodes"
+            android:id="@+id/opening"
             style="@style/Control"
-            android:text="@string/detail_episode" />
+            android:text="@string/play_op" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/ending"
+            style="@style/Control"
+            android:text="@string/play_ed" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 </HorizontalScrollView>

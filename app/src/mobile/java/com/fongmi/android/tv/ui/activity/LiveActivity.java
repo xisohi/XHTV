@@ -3,7 +3,6 @@ package com.fongmi.android.tv.ui.activity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -67,6 +66,7 @@ import com.fongmi.android.tv.playback.live.LivePlaybackController;
 import com.fongmi.android.tv.playback.live.LivePlaybackHost;
 import com.fongmi.android.tv.playback.live.LivePlaybackMedia;
 import com.fongmi.android.tv.playback.PlaybackAction;
+import com.fongmi.android.tv.playback.PlaybackOrientation;
 import com.fongmi.android.tv.playback.PlaybackReset;
 import com.fongmi.android.tv.utils.Biometric;
 import com.fongmi.android.tv.utils.ImgUtil;
@@ -373,7 +373,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private void onRotate() {
         setR1Callback();
         setRotate(!isRotate());
-        setRequestedOrientation(ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        setRequestedOrientation(PlaybackOrientation.getRotateOrientation(this));
     }
 
     private void checkPlay() {
@@ -454,13 +454,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private int getLockOrient() {
-        if (isLock()) {
-            return ResUtil.getScreenOrientation(this);
-        } else if (isRotate()) {
-            return ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT;
-        } else {
-            return ResUtil.isLand(this) ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT;
-        }
+        return PlaybackOrientation.getLockOrientation(this, isLock(), isRotate());
     }
 
     private void hideUI() {

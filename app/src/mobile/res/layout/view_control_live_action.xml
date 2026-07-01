@@ -24,6 +24,11 @@
             tools:text="首頁" />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/line"
+            style="@style/Control"
+            tools:text="來源 1" />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/player"
             style="@style/Control"
             android:text="@string/player_engine" />
@@ -46,10 +51,10 @@
             style="@style/Control"
             android:text="@string/play_scale" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/line"
-            style="@style/Control"
-            tools:text="來源 1" />
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/text"

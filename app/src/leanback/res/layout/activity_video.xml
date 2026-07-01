@@ -199,7 +199,7 @@
             app:drawableStartCompat="@drawable/ic_detail_keep_off" />
 
         <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/change1"
+            android:id="@+id/change"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/selector_item"
@@ -207,7 +207,7 @@
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:gravity="center"
-            android:nextFocusRight="@id/change1"
+            android:nextFocusRight="@id/change"
             android:nextFocusUp="@id/actor"
             android:nextFocusDown="@id/flag"
             android:singleLine="true"
