@@ -2,11 +2,12 @@ package com.fongmi.android.tv.player.effect.video;
 
 import androidx.media3.common.VideoFrameProcessingException;
 
-final class ToneAdjustShaderProgram extends VideoAdjustShaderProgram {
+final class ColorToneAdjustShaderProgram extends VideoAdjustShaderProgram {
 
     private static final String FRAGMENT_SHADER = """
-            precision mediump float;
+            precision highp float;
             uniform sampler2D uTexSampler;
+            uniform mat4 uColorMatrix;
             uniform float uGamma;
             uniform float uHue;
             varying vec2 vTexSamplingCoord;
@@ -23,22 +24,25 @@ final class ToneAdjustShaderProgram extends VideoAdjustShaderProgram {
             }
             void main() {
               vec4 sample = texture2D(uTexSampler, vTexSamplingCoord);
-              vec3 color = pow(clamp(sample.rgb, 0.0, 1.0), vec3(1.0 / max(uGamma, 0.0001)));
+              vec3 color = clamp((uColorMatrix * vec4(sample.rgb, 1.0)).rgb, 0.0, 1.0);
+              if (abs(uGamma - 1.0) > 0.0001) color = pow(color, vec3(1.0 / max(uGamma, 0.0001)));
               if (abs(uHue) > 0.0001) color = rotateHue(color, uHue);
               gl_FragColor = vec4(color, sample.a);
             }
             """;
 
-    private final ToneAdjustEffect effect;
+    private final ColorToneAdjustEffect effect;
 
-    ToneAdjustShaderProgram(boolean useHighPrecisionColorComponents, ToneAdjustEffect effect) throws VideoFrameProcessingException {
-        super(useHighPrecisionColorComponents, FRAGMENT_SHADER);
+    ColorToneAdjustShaderProgram(boolean useHdr, ColorToneAdjustEffect effect) throws VideoFrameProcessingException {
+        super(useHdr, FRAGMENT_SHADER);
         this.effect = effect;
     }
 
     @Override
     protected void bindUniforms() {
-        glProgram.setFloatUniform("uGamma", effect.getGamma());
-        glProgram.setFloatUniform("uHue", effect.getHue());
+        ColorToneAdjustEffect.Parameters parameters = effect.getParameters();
+        glProgram.setFloatsUniform("uColorMatrix", parameters.colorMatrix);
+        glProgram.setFloatUniform("uGamma", parameters.gamma);
+        glProgram.setFloatUniform("uHue", parameters.hue);
     }
 }

@@ -13,25 +13,21 @@ abstract class VideoAdjustShaderProgram extends BaseGlShaderProgram {
 
     private static final String VERTEX_SHADER = """
             attribute vec4 aFramePosition;
-            uniform mat4 uTransformationMatrix;
-            uniform mat4 uTexTransformationMatrix;
             varying vec2 vTexSamplingCoord;
             void main() {
-              gl_Position = uTransformationMatrix * aFramePosition;
-              vec4 texturePosition = vec4(aFramePosition.x * 0.5 + 0.5, aFramePosition.y * 0.5 + 0.5, 0.0, 1.0);
-              vTexSamplingCoord = (uTexTransformationMatrix * texturePosition).xy;
+              gl_Position = aFramePosition;
+              vTexSamplingCoord = aFramePosition.xy * 0.5 + 0.5;
             }
             """;
 
     protected final GlProgram glProgram;
 
-    VideoAdjustShaderProgram(boolean useHighPrecisionColorComponents, String fragmentShader) throws VideoFrameProcessingException {
-        super(useHighPrecisionColorComponents, 1);
+    VideoAdjustShaderProgram(boolean useHdr, String fragmentShader) throws VideoFrameProcessingException {
+        super(false, 1);
+        if (useHdr) throw new VideoFrameProcessingException("Video adjustment does not support HDR");
         try {
             glProgram = new GlProgram(VERTEX_SHADER, fragmentShader);
             glProgram.setBufferAttribute("aFramePosition", GlUtil.getNormalizedCoordinateBounds(), GlUtil.HOMOGENEOUS_COORDINATE_VECTOR_SIZE);
-            glProgram.setFloatsUniform("uTransformationMatrix", GlUtil.create4x4IdentityMatrix());
-            glProgram.setFloatsUniform("uTexTransformationMatrix", GlUtil.create4x4IdentityMatrix());
         } catch (GlUtil.GlException e) {
             throw new VideoFrameProcessingException(e);
         }

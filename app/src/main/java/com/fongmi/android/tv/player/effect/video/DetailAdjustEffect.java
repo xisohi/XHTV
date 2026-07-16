@@ -19,24 +19,8 @@ final class DetailAdjustEffect implements GlEffect {
         this.profile = profile;
     }
 
-    float getSharpness() {
-        return profile.sharpness;
-    }
-
-    float getThreshold() {
-        return profile.threshold;
-    }
-
-    float getShadowLift() {
-        return profile.shadowLift;
-    }
-
-    float getShadowStart() {
-        return profile.shadowStart;
-    }
-
-    float getShadowEnd() {
-        return profile.shadowEnd;
+    VideoEffectProfile getProfile() {
+        return profile;
     }
 
     @NonNull

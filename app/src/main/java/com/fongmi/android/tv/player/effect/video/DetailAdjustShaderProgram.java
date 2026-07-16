@@ -7,16 +7,16 @@ import androidx.media3.common.util.Size;
 final class DetailAdjustShaderProgram extends VideoAdjustShaderProgram {
 
     private static final String FRAGMENT_SHADER = """
-            precision mediump float;
+            precision highp float;
             uniform sampler2D uTexSampler;
             uniform vec2 uTexelSize;
             uniform float uSharpness;
             uniform float uThreshold;
             uniform float uShadowLift;
-            uniform float uShadowStart;
-            uniform float uShadowEnd;
             varying vec2 vTexSamplingCoord;
             const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+            const float SHADOW_START = 0.08;
+            const float SHADOW_END = 0.55;
             void main() {
               vec4 center = texture2D(uTexSampler, vTexSamplingCoord);
               vec3 color = center.rgb;
@@ -32,7 +32,7 @@ final class DetailAdjustShaderProgram extends VideoAdjustShaderProgram {
               }
               if (uShadowLift > 0.0) {
                 float luma = dot(color, LUMA);
-                float shadow = 1.0 - smoothstep(uShadowStart, uShadowEnd, luma);
+                float shadow = 1.0 - smoothstep(SHADOW_START, SHADOW_END, luma);
                 color = clamp(color + (1.0 - color) * uShadowLift * shadow, 0.0, 1.0);
               }
               gl_FragColor = vec4(color, center.a);
@@ -41,8 +41,8 @@ final class DetailAdjustShaderProgram extends VideoAdjustShaderProgram {
 
     private final DetailAdjustEffect effect;
 
-    DetailAdjustShaderProgram(boolean useHighPrecisionColorComponents, DetailAdjustEffect effect) throws VideoFrameProcessingException {
-        super(useHighPrecisionColorComponents, FRAGMENT_SHADER);
+    DetailAdjustShaderProgram(boolean useHdr, DetailAdjustEffect effect) throws VideoFrameProcessingException {
+        super(useHdr, FRAGMENT_SHADER);
         this.effect = effect;
     }
 
@@ -55,10 +55,9 @@ final class DetailAdjustShaderProgram extends VideoAdjustShaderProgram {
 
     @Override
     protected void bindUniforms() {
-        glProgram.setFloatUniform("uSharpness", effect.getSharpness());
-        glProgram.setFloatUniform("uThreshold", effect.getThreshold());
-        glProgram.setFloatUniform("uShadowLift", effect.getShadowLift());
-        glProgram.setFloatUniform("uShadowStart", effect.getShadowStart());
-        glProgram.setFloatUniform("uShadowEnd", effect.getShadowEnd());
+        VideoEffectProfile profile = effect.getProfile();
+        glProgram.setFloatUniform("uSharpness", profile.sharpness);
+        glProgram.setFloatUniform("uThreshold", profile.threshold);
+        glProgram.setFloatUniform("uShadowLift", profile.shadowLift);
     }
 }
