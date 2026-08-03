@@ -9,4 +9,8 @@
     android:singleLine="true"
     android:textColor="@color/selector_control"
     android:textSize="14sp"
+<<<<<<<< HEAD:app/src/mobile/res/layout/adapter_edition.xml
+    tools:text="Edition 1" />
+========
     tools:text="Chapter 1" />
+>>>>>>>> upstream/fongmi:app/src/mobile/res/layout/adapter_chapter.xml
