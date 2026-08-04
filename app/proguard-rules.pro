@@ -80,3 +80,6 @@
 -keep class com.google.zxing.qrcode.QRCodeReader { *; }
 -keep class com.google.zxing.qrcode.QRCodeWriter { *; }
 -keep class com.google.zxing.qrcode.decoder.ErrorCorrectionLevel { *; }
+# 忽略 Cling 相关警告
+-dontwarn org.fourthline.cling.**
+-dontwarn org.eclipse.jetty.**
