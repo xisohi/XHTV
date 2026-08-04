@@ -11,8 +11,4 @@
     android:singleLine="true"
     android:textColor="@color/text"
     android:textSize="14sp"
-<<<<<<<< HEAD:app/src/leanback/res/layout/adapter_chapter.xml
-    tools:text="Chapter 1" />
-========
     tools:text="Subtitle" />
->>>>>>>> upstream/fongmi:app/src/leanback/res/layout/adapter_subtitle.xml

@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:app/src/main/java/com/fongmi/android/tv/player/util/PlayerHelper.java
-package com.fongmi.android.tv.player.util;
-========
 package com.fongmi.android.tv.playback;
->>>>>>>> upstream/fongmi:app/src/main/java/com/fongmi/android/tv/playback/PlaybackIntent.java
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -11,15 +7,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
-<<<<<<<< HEAD:app/src/main/java/com/fongmi/android/tv/player/util/PlayerHelper.java
-import android.text.TextUtils;
-
-import androidx.media3.common.C;
-import androidx.media3.common.Format;
-import androidx.media3.common.MimeTypes;
-import androidx.media3.common.util.Util;
-========
->>>>>>>> upstream/fongmi:app/src/main/java/com/fongmi/android/tv/playback/PlaybackIntent.java
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.utils.FileUtil;
@@ -29,45 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.LongConsumer;
 
-<<<<<<<< HEAD:app/src/main/java/com/fongmi/android/tv/player/util/PlayerHelper.java
-public class PlayerHelper {
-
-    public static String getDefaultUa() {
-        return Util.getUserAgent(App.get(), BuildConfig.APPLICATION_ID);
-    }
-
-    public static String getSubtitleMimeType(String path) {
-        if (TextUtils.isEmpty(path)) return "";
-        if (path.endsWith(".vtt")) return MimeTypes.TEXT_VTT;
-        if (path.endsWith(".ssa") || path.endsWith(".ass")) return MimeTypes.TEXT_SSA;
-        if (path.endsWith(".ttml") || path.endsWith(".xml") || path.endsWith(".dfxp")) return MimeTypes.APPLICATION_TTML;
-        return MimeTypes.APPLICATION_SUBRIP;
-    }
-
-    public static Bundle toBundle(Map<String, String> headers) {
-        Bundle bundle = new Bundle();
-        if (headers != null) headers.forEach(bundle::putString);
-        return bundle;
-    }
-
-    public static String describeFormat(Format format) {
-        StringJoiner joiner = new StringJoiner(",");
-        if (format.id != null) joiner.add(format.id);
-        if (format.label != null) joiner.add(format.label);
-        if (format.codecs != null) joiner.add(format.codecs);
-        if (format.language != null) joiner.add(format.language);
-        if (format.sampleMimeType != null) joiner.add(format.sampleMimeType);
-        if (format.containerMimeType != null) joiner.add(format.containerMimeType);
-        if (format.width != C.LENGTH_UNSET) joiner.add(String.valueOf(format.width));
-        if (format.height != C.LENGTH_UNSET) joiner.add(String.valueOf(format.height));
-        if (format.sampleRate != C.RATE_UNSET_INT) joiner.add(String.valueOf(format.sampleRate));
-        if (format.channelCount != C.LENGTH_UNSET) joiner.add(String.valueOf(format.channelCount));
-        if (format.averageBitrate != C.LENGTH_UNSET) joiner.add(String.valueOf(format.averageBitrate));
-        return joiner.toString();
-    }
-========
 public final class PlaybackIntent {
->>>>>>>> upstream/fongmi:app/src/main/java/com/fongmi/android/tv/playback/PlaybackIntent.java
 
     public static void share(Activity activity, String url, Map<String, String> headers, CharSequence title) {
         try {

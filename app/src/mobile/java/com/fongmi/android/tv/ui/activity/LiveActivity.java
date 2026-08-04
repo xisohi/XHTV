@@ -64,13 +64,6 @@ import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.SpeedSettingDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
-import com.fongmi.android.tv.playback.live.LivePlayRequest;
-import com.fongmi.android.tv.playback.live.LivePlaybackController;
-import com.fongmi.android.tv.playback.live.LivePlaybackHost;
-import com.fongmi.android.tv.playback.live.LivePlaybackMedia;
-import com.fongmi.android.tv.playback.PlaybackAction;
-import com.fongmi.android.tv.playback.PlaybackOrientation;
-import com.fongmi.android.tv.playback.PlaybackReset;
 import com.fongmi.android.tv.utils.Biometric;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
@@ -263,11 +256,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         resetPlaybackForError(msg);
     }
 
-    private void onUrlObserved(Result result) {
-        if (service() == null) return;
-        mLive.onUrlResult(result);
-    }
-
     private void checkLive() {
         if (isEmpty()) {
             LiveConfig.get().init().load(getCallback());
@@ -422,6 +410,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     private boolean onSpeedLong() {
         PlaybackAction.toggleSpeed(player(), mBinding.widget.message);
         setR1Callback();
+        return true;
     }
 
     private void onConfig() {
@@ -448,7 +437,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onDecode() {
-        PlaybackAction.toggleDecode(player());
+        player().toggleDecode();
         setR1Callback();
     }
 
