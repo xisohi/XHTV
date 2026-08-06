@@ -35,14 +35,14 @@ public class Github {
 
     /**
      * JSON 配置文件地址（自定义服务器 - 无需代理）
-     * 示例: https://xhys.lcjly.cn/update/lkys.json
+     * 示例: https://xhys.xisohi.dpdns.org/update/lkys.json
      *
      * @param name 配置文件名（不含扩展名）
      * @return 完整的JSON URL
      */
     public static String getJson(String name) {
         // 自定义服务器（推荐，更稳定，无需代理）
-        return "https://xhys.lcjly.cn/update/" + name + ".json";
+        return "https://xhys.xisohi.dpdns.org/update/" + name + ".json";
     }
 
     /**
