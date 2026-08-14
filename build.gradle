@@ -4,11 +4,6 @@ buildscript {
         mavenCentral()
         google()
     }
-    dependencies {
-        // 使用与 Media3 兼容的 Kotlin 版本
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21"
-        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.0.21"
-    }
 }
 plugins {
     alias libs.plugins.android.application apply false
