@@ -4,20 +4,10 @@ pluginManagement {
         mavenCentral()
         google()
     }
-    includeBuild("media/build-logic-settings")
 }
 
 plugins {
     id "org.gradle.toolchains.foojay-resolver-convention" version "1.0.0"
-    id 'gradlebuild.media3-settings-logic'
-}
-// 【新增】定义 Media3 仓库路径，并执行官方引入方法
-def mediaRepoPath = "media" // 请根据你的实际路径修改，例如 "../media" 或 "path/to/media"
-if (file(mediaRepoPath).exists()) {
-    includeMedia3.execute(file(mediaRepoPath))
-} else {
-    println "警告: Media3 仓库路径不存在: ${mediaRepoPath}，跳过本地引入。"
-    // 如果你没有克隆 media 仓库，可以在这里添加远程依赖配置
 }
 
 dependencyResolutionManagement {

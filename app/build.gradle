@@ -136,35 +136,48 @@ dependencies {
     annotationProcessor libs.eventbus.annotation.processor
     annotationProcessor libs.glide.compiler
     coreLibraryDesugaring libs.desugar
-    // 使用 media 模块（core_settings.gradle 已经定义好这些路径）
-    implementation project(':media-lib-cast')
-    implementation project(':media-lib-common')
-    implementation project(':media-lib-container')
-    implementation project(':media-lib-database')
-    implementation project(':media-lib-datasource')
-    implementation project(':media-lib-datasource-okhttp')
-    implementation project(':media-lib-decoder')
-    implementation project(':media-lib-decoder-av1')
-    implementation project(':media-lib-decoder-ffmpeg')
-    implementation project(':media-lib-decoder-flac')
-    implementation project(':media-lib-decoder-iamf')
-    implementation project(':media-lib-decoder-mpegh')
-    implementation project(':media-lib-decoder-opus')
-    implementation project(':media-lib-decoder-vp9')
-    implementation project(':media-lib-effect')
-    implementation project(':media-lib-exoplayer')
-    implementation project(':media-lib-exoplayer-dash')
-    implementation project(':media-lib-exoplayer-hls')
-    implementation project(':media-lib-exoplayer-ima')
-    implementation project(':media-lib-exoplayer-rtsp')
-    implementation project(':media-lib-exoplayer-smoothstreaming')
-    implementation project(':media-lib-exoplayer-workmanager')
-    implementation project(':media-lib-extractor')
-    implementation project(':media-lib-inspector')
-    implementation project(':media-lib-muxer')
-    implementation project(':media-lib-session')
-    implementation project(':media-lib-ui')
-    leanbackImplementation project(':media-lib-ui-leanback')
+    // ===== Media3 依赖 (使用 Maven 坐标，复合构建会自动使用本地源码) =====
+    def media3_version = '1.11.0'  // 使用当前稳定版本
+
+    // 核心模块
+    implementation "androidx.media3:media3-exoplayer:$media3_version"
+    implementation "androidx.media3:media3-common:$media3_version"
+    implementation "androidx.media3:media3-session:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-cast:$media3_version"
+
+    // 扩展播放器
+    implementation "androidx.media3:media3-exoplayer-dash:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-smoothstreaming:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-rtsp:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-ima:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-workmanager:$media3_version"
+
+    // 数据源
+    implementation "androidx.media3:media3-datasource:$media3_version"
+    implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
+
+    // 解码器
+    implementation "androidx.media3:media3-decoder:$media3_version"
+    implementation "androidx.media3:media3-decoder-av1:$media3_version"
+    implementation "androidx.media3:media3-decoder-ffmpeg:$media3_version"
+    implementation "androidx.media3:media3-decoder-flac:$media3_version"
+    implementation "androidx.media3:media3-decoder-iamf:$media3_version"
+    implementation "androidx.media3:media3-decoder-mpegh:$media3_version"
+    implementation "androidx.media3:media3-decoder-opus:$media3_version"
+    implementation "androidx.media3:media3-decoder-vp9:$media3_version"
+
+    // 其他工具
+    implementation "androidx.media3:media3-container:$media3_version"
+    implementation "androidx.media3:media3-database:$media3_version"
+    implementation "androidx.media3:media3-effect:$media3_version"
+    implementation "androidx.media3:media3-extractor:$media3_version"
+    implementation "androidx.media3:media3-inspector:$media3_version"
+    implementation "androidx.media3:media3-muxer:$media3_version"
+
+    // Leanback UI (仅在 leanback flavor 中使用)
+    leanbackImplementation "androidx.media3:media3-ui-leanback:$media3_version"
     implementation('io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0') {
         exclude group: 'androidx.media3'}
     }
