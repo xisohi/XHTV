@@ -5,15 +5,6 @@ pluginManagement {
         google()
     }
     includeBuild("media/build-logic-settings")
-
-    // ===== 新增：强制所有 Kotlin 插件使用统一版本 =====
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id.startsWith("org.jetbrains.kotlin")) {
-                useVersion("2.0.21")  // 使用与你的项目兼容的版本
-            }
-        }
-    }
 }
 
 plugins {
