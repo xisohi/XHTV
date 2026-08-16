@@ -36,7 +36,7 @@ public class ConfigDialog extends BaseAlertDialog {
     private DialogConfigBinding binding;
     private boolean append = true;
     private boolean edit;
-    private String realUrl;      // 真实URL（用于保存）
+    private String ori;          // 原始 URL（用于编辑时对比）
     private int type;
 
     public static ConfigDialog create() {
@@ -67,6 +67,16 @@ public class ConfigDialog extends BaseAlertDialog {
         show(activity.getSupportFragmentManager(), null);
     }
 
+    // ===== 添加 getConfig() 方法 =====
+    private Config getConfig() {
+        return switch (type) {
+            case 0 -> VodConfig.get().getConfig();
+            case 1 -> LiveConfig.get().getConfig();
+            case 2 -> WallConfig.get().getConfig();
+            default -> null;
+        };
+    }
+
     @Override
     protected ViewBinding getBinding() {
         return binding = DialogConfigBinding.inflate(getLayoutInflater());
@@ -79,15 +89,30 @@ public class ConfigDialog extends BaseAlertDialog {
 
     @Override
     protected void initView() {
-        // 获取真实URL
-        realUrl = getRealUrl();
-        // 决定显示文本：如果是内置源则显示"内置源"，否则显示真实URL
-        String displayText = getDisplayText(realUrl);
-        binding.text.setText(displayText);
-        binding.text.setSelection(TextUtils.isEmpty(displayText) ? 0 : displayText.length());
+        if (binding == null) return;
+
+        Config config = getConfig();
+        ori = config != null ? config.getUrl() : "";
+
+        // 获取显示用的 URL（内置源显示为"内置源"）
+        String displayUrl = getDisplayUrl(config);
+        binding.text.setText(displayUrl);
+        binding.text.setSelection(TextUtils.isEmpty(displayUrl) ? 0 : displayUrl.length());
+
         binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
         binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(4), 200, 0));
         binding.info.setText(ResUtil.getString(R.string.push_info, Server.get().getAddress()).replace("\uff0c", "\n"));
+    }
+
+    // ===== 添加 getDisplayUrl() 方法 =====
+    private String getDisplayUrl(Config config) {
+        if (config == null) return "";
+        String url = config.getUrl();
+        // 如果是内置源或 URL 为空，显示"内置源"
+        if (TextUtils.isEmpty(url) || Config.BUILTIN_URL.equals(url)) {
+            return Config.BUILTIN_NAME;
+        }
+        return url;
     }
 
     @Override
@@ -105,23 +130,6 @@ public class ConfigDialog extends BaseAlertDialog {
             if (actionId == EditorInfo.IME_ACTION_DONE) binding.positive.performClick();
             return true;
         });
-    }
-
-
-    private String getRealUrl() {
-        switch (type) {
-            case 0: return VodConfig.getUrl();
-            case 1: return LiveConfig.getUrl();
-            case 2: return WallConfig.getUrl();
-            default: return "";
-        }
-    }
-
-    private String getDisplayText(String url) {
-        if (Config.BUILTIN_URL.equals(url)) {
-            return Config.BUILTIN_NAME;
-        }
-        return url;
     }
 
     private void onChoose(View view) {
@@ -145,22 +153,37 @@ public class ConfigDialog extends BaseAlertDialog {
         }
     }
 
+    // ===== 修复 onPositive 方法签名（使用 View 参数，与 onClickListener 匹配） =====
     private void onPositive(View view) {
-        String name = binding.name.getText().toString().trim();
+        // 注意：这里使用 binding.text 而不是 binding.url
         String text = binding.text.getText().toString().trim();
+        String name = binding.name.getText().toString().trim();
 
-        String finalUrl;
-        // 如果原始是内置源且用户输入的是"内置源"，则保存真实内置URL
-        if (Config.BUILTIN_URL.equals(realUrl) && Config.BUILTIN_NAME.equals(text)) {
-            finalUrl = realUrl;
-        } else {
-            finalUrl = text;
+        // 如果用户输入的是"内置源"或空，则保存为空（触发内置源）
+        String finalUrl = text;
+        if (TextUtils.isEmpty(text) || Config.BUILTIN_NAME.equals(text)) {
+            finalUrl = "";
+            name = Config.BUILTIN_NAME;
         }
 
-        if (edit) Config.find(realUrl, type).url(finalUrl).update();
-        if (finalUrl.isEmpty()) Config.delete(realUrl, type);
-        if (name.isEmpty()) ((ConfigListener) requireActivity()).setConfig(Config.find(finalUrl, type));
-        else ((ConfigListener) requireActivity()).setConfig(Config.find(finalUrl, name, type));
+        // 保存配置
+        Config config = getConfig();
+        if (config != null) {
+            config.setUrl(finalUrl);
+            config.setName(name);
+            config.update();
+        }
+
+        // 如果 URL 为空，删除原配置
+        if (TextUtils.isEmpty(finalUrl)) {
+            Config.delete(ori, type);
+        }
+
+        // 通知监听器
+        if (requireParentFragment() instanceof ConfigListener) {
+            ((ConfigListener) requireParentFragment()).setConfig(Config.find(finalUrl, type));
+        }
+
         dismiss();
     }
 
@@ -172,13 +195,7 @@ public class ConfigDialog extends BaseAlertDialog {
     public void onServerEvent(ServerEvent event) {
         if (event.type() != ServerEvent.Type.SETTING) return;
         binding.name.setText(event.name());
-        String pushedText = event.text();
-        // 如果推送的是内置URL，显示为"内置源"
-        if (Config.BUILTIN_URL.equals(pushedText)) {
-            binding.text.setText(Config.BUILTIN_NAME);
-        } else {
-            binding.text.setText(pushedText);
-        }
+        binding.text.setText(event.text());
         binding.text.setSelection(binding.text.getText().length());
     }
 
@@ -195,9 +212,15 @@ public class ConfigDialog extends BaseAlertDialog {
         EventBus.getDefault().unregister(this);
     }
 
-    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
-        ((ConfigListener) requireActivity()).setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
-        dismiss();
-    });
+    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
+                ((ConfigListener) requireActivity()).setConfig(Config.find(
+                        "file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""),
+                        type
+                ));
+                dismiss();
+            }
+    );
 }

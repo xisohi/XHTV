@@ -3,6 +3,7 @@ package com.fongmi.android.tv.api.config;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.text.TextUtils;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -75,8 +76,12 @@ public class WallConfig extends BaseConfig {
 
     @Override
     protected void load(Config config) throws Throwable {
+        String url = config.getUrl();
+        if (TextUtils.isEmpty(url)) {
+            url = Config.BUILTIN_URL;
+        }
         File file = FileUtil.getWall(0);
-        checkUrl(config.getUrl(), file);
+        checkUrl(url, file);
         setWallType(file);
         setSnapshot(file);
     }

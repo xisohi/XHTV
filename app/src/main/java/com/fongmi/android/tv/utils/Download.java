@@ -3,55 +3,80 @@ package com.fongmi.android.tv.utils;
 import android.util.Log;
 
 import com.fongmi.android.tv.App;
-import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
-import com.google.common.net.HttpHeaders;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.ref.WeakReference;
+import java.io.RandomAccessFile;
 import java.util.concurrent.Future;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.Response;
 
-/**
- * 文件下载工具类
- * 支持动态URL切换和弱引用防内存泄漏
- */
 public class Download {
 
+    private static final String TAG = "Download";
+
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+
     private final File file;
+    private String originalUrl;
     private String url;
-    private String tag;
-    private WeakReference<Callback> callbackRef;
+    private Callback callback;
     private Future<?> future;
+    private long maxBytes;
+    private String tag;
+    private int retryIndex;
+    private long downloadedBytes = 0;
 
     public static Download create(String url, File file) {
         return new Download(url, file);
     }
 
     public Download(String url, File file) {
+        this.maxBytes = Long.MAX_VALUE;
         this.tag = url;
         this.url = url;
         this.file = file;
+        this.retryIndex = 0;
+        this.originalUrl = extractOriginalUrl(url);
+        if (file.exists()) {
+            this.downloadedBytes = file.length();
+            Log.d(TAG, "发现已下载文件，大小: " + downloadedBytes + " bytes");
+        } else {
+            this.downloadedBytes = 0;
+        }
+        Log.d(TAG, "原始 URL: " + originalUrl);
+        Log.d(TAG, "========== 创建下载任务 ==========");
+        Log.d(TAG, "下载 URL: " + url);
+        Log.d(TAG, "保存路径: " + file.getAbsolutePath());
+        Log.d(TAG, "已下载: " + downloadedBytes + " bytes");
     }
 
-    /**
-     * 动态设置下载URL（用于切换代理）
-     * @param url 新的下载地址
-     * @return this
-     */
-    public synchronized Download setUrl(String url) {
-        this.url = url;
-        this.tag = url; // tag同步更新，确保取消时能正确匹配
-        return this;
+    private String extractOriginalUrl(String url) {
+        if (url == null) return url;
+        for (String proxy : Github.PROXY_HOSTS) {
+            if (url.startsWith("https://" + proxy + "/")) {
+                return url.substring(("https://" + proxy + "/").length());
+            }
+        }
+        return url;
     }
 
     public Download tag(String tag) {
         this.tag = tag;
+        return this;
+    }
+
+    public Download maxBytes(long maxBytes) {
+        this.maxBytes = maxBytes > 0 ? maxBytes : Long.MAX_VALUE;
         return this;
     }
 
@@ -60,88 +85,210 @@ public class Download {
         return file;
     }
 
+    /**
+     * 开始下载（重置所有状态）
+     */
     public void start(Callback callback) {
-        this.callbackRef = new WeakReference<>(callback);
-        future = App.submit(this::doInBackground);
+        this.callback = callback;
+        this.retryIndex = 0;
+        this.url = this.originalUrl;
+        if (file.exists()) {
+            this.downloadedBytes = file.length();
+        } else {
+            this.downloadedBytes = 0;
+        }
+        future = Task.submit(this::doInBackground);
+    }
+
+    /**
+     * 重试下载（不重置 URL，用于代理切换后）
+     */
+    public void retry() {
+        if (file.exists()) {
+            this.downloadedBytes = file.length();
+        } else {
+            this.downloadedBytes = 0;
+        }
+        future = Task.submit(this::doInBackground);
+    }
+
+    /**
+     * 切换到下一个代理
+     */
+    public boolean switchToNextProxy() {
+        if (!originalUrl.contains("github.com")) {
+            return false;
+        }
+        int proxyCount = Github.getProxyCount();
+        if (proxyCount == 0) {
+            return false;
+        }
+        if (retryIndex >= proxyCount) {
+            Log.w(TAG, "所有代理已尝试完毕");
+            return false;
+        }
+        String newUrl = Github.getProxyUrlByIndex(originalUrl, retryIndex);
+        if (newUrl == null) {
+            return false;
+        }
+        this.url = newUrl;
+        Log.i(TAG, "切换到代理 " + (retryIndex + 1) + "/" + proxyCount + ": " + newUrl);
+        retryIndex++;
+        return true;
     }
 
     public Download cancel() {
-        if (future != null) future.cancel(true);
-        OkHttp.cancel(tag);
+        if (future != null) {
+            future.cancel(true);
+        }
         future = null;
-        callbackRef = null;
+        callback = null;
         return this;
     }
 
     private void doInBackground() {
-        // ✅ 修复：使用临时文件确保原子性
-        File tempFile = new File(file.getAbsolutePath() + ".tmp");
+        Log.d(TAG, "========== 开始下载执行 ==========");
+        Log.d(TAG, "下载 URL: " + url);
+        Log.d(TAG, "已下载: " + downloadedBytes + " bytes");
 
-        try (Response res = OkHttp.newCall(url, tag).execute()) {
-            if (res.isSuccessful() && res.body() != null) {
-                // ✅ 修复：下载到临时文件
-                download(res.body().byteStream(), getLength(res), tempFile);
+        RandomAccessFile raf = null;
+        try {
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
 
-                // ✅ 修复：下载完成后重命名
-                if (!tempFile.renameTo(file)) {
-                    throw new IOException("无法重命名临时文件: " + tempFile);
+            raf = new RandomAccessFile(file, "rw");
+            raf.seek(downloadedBytes);
+
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+            if (downloadedBytes > 0) {
+                requestBuilder.addHeader("Range", "bytes=" + downloadedBytes + "-");
+                Log.d(TAG, "断点续传: bytes=" + downloadedBytes + "-");
+            }
+
+            Request request = requestBuilder.build();
+
+            try (Response res = HTTP_CLIENT.newCall(request).execute()) {
+                Log.d(TAG, "服务器响应状态码: " + res.code());
+
+                if (res.code() == 206) {
+                    Log.d(TAG, "✅ 断点续传成功");
+                } else if (res.code() == 200) {
+                    Log.d(TAG, "📥 全新下载");
+                    if (downloadedBytes > 0) {
+                        raf.close();
+                        file.delete();
+                        raf = new RandomAccessFile(file, "rw");
+                        downloadedBytes = 0;
+                        Log.w(TAG, "文件已存在但服务器不支持断点续传，重新下载");
+                    }
+                } else if (res.code() == 416) {
+                    Log.d(TAG, "文件已下载完整 (416 Range Not Satisfiable)");
+                    if (callback != null) {
+                        App.post(() -> callback.success(file));
+                    }
+                    return;
                 }
 
-                Callback cb = callbackRef != null ? callbackRef.get() : null;
-                if (cb != null) App.post(() -> cb.success(file));
-            } else {
-                throw new IOException("请求失败: HTTP " + res.code() + " " + res.message());
+                if (res.isSuccessful() && res.body() != null) {
+                    long totalSize = getTotalSize(res);
+                    Log.d(TAG, "文件总大小: " + totalSize + " bytes");
+                    download(res.body().byteStream(), totalSize, raf);
+                    Log.d(TAG, "========== 下载完成 ==========");
+                    if (callback != null) {
+                        App.post(() -> callback.success(file));
+                    }
+                } else {
+                    throw new IOException("请求失败: HTTP " + res.code() + " " + res.message());
+                }
             }
         } catch (Exception e) {
-            // ✅ 修复：清理两个文件
-            Path.clear(tempFile);
-            Path.clear(file);
-
-            Callback cb = callbackRef != null ? callbackRef.get() : null;
-            if (cb != null) App.post(() -> cb.error(e.getMessage()));
-            else throw new RuntimeException(e.getMessage(), e);
+            Log.e(TAG, "========== 下载异常 ==========");
+            Log.e(TAG, "异常信息: " + e.getMessage());
+            if (file.exists() && file.length() == 0) {
+                Path.clear(file);
+            }
+            if (callback != null) {
+                App.post(() -> callback.error(e.getMessage()));
+            }
+        } finally {
+            if (raf != null) {
+                try {
+                    raf.close();
+                } catch (IOException e) {
+                    Log.w(TAG, "关闭文件异常: " + e.getMessage());
+                }
+            }
         }
+        Log.d(TAG, "========== 下载线程结束 ==========");
     }
 
-    private void download(InputStream is, double length, File temp) throws IOException {
-        try (BufferedInputStream input = new BufferedInputStream(is);
-             FileOutputStream os = new FileOutputStream(Path.create(temp))) {
+    private long getTotalSize(Response res) {
+        String rangeHeader = res.header("Content-Range");
+        if (rangeHeader != null && rangeHeader.contains("/")) {
+            try {
+                String total = rangeHeader.substring(rangeHeader.indexOf('/') + 1);
+                return Long.parseLong(total);
+            } catch (Exception e) {
+                Log.w(TAG, "解析 Content-Range 失败: " + e.getMessage());
+            }
+        }
 
-            byte[] buffer = new byte[16384];
+        try {
+            String length = res.header("Content-Length");
+            if (length != null && !length.isEmpty()) {
+                long total = Long.parseLong(length);
+                if (res.code() == 206) {
+                    total += downloadedBytes;
+                }
+                return total;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "解析 Content-Length 失败: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    private void download(InputStream is, long totalSize, RandomAccessFile raf) throws IOException {
+        Log.d(TAG, "开始写入文件...");
+
+        try (BufferedInputStream input = new BufferedInputStream(is)) {
+            byte[] buffer = new byte[32768];
             int readBytes;
-            long totalBytes = 0;
+            long totalBytes = downloadedBytes;
+            int lastProgress = -1;
 
             while ((readBytes = input.read(buffer)) != -1) {
-                // ✅ 修复：检查中断并清理
                 if (Thread.interrupted()) {
-                    throw new InterruptedException("下载被取消");
+                    Log.w(TAG, "下载被中断，已保存进度: " + totalBytes);
+                    return;
                 }
 
+                raf.write(buffer, 0, readBytes);
                 totalBytes += readBytes;
-                os.write(buffer, 0, readBytes);
+                downloadedBytes = totalBytes;
 
-                if (length > 0) {
-                    int progress = (int) (totalBytes / length * 100.0);
-                    Callback cb = callbackRef != null ? callbackRef.get() : null;
-                    if (cb != null) App.post(() -> cb.progress(progress));
+                if (totalSize <= 0 || callback == null) continue;
+
+                int progress = (int) (totalBytes * 100 / totalSize);
+                progress = Math.max(0, Math.min(100, progress));
+
+                if (progress != lastProgress && progress % 2 == 0) {
+                    Log.d(TAG, "下载进度: " + progress + "% (" + totalBytes + "/" + totalSize + " bytes)");
+                    lastProgress = progress;
                 }
+
+                final int currentProgress = progress;
+                App.post(() -> callback.progress(currentProgress));
             }
-
-            os.flush(); // 确保数据完全写入磁盘
-        } catch (InterruptedException e) {
-            // ✅ 修复：清理并重新抛出
-            Path.clear(temp);
-            Thread.currentThread().interrupt(); // 恢复中断状态
-            throw new IOException("下载被中断", e);
-        }
-    }
-
-    private double getLength(Response res) {
-        try {
-            String header = res.header(HttpHeaders.CONTENT_LENGTH);
-            return header != null ? Double.parseDouble(header) : -1;
+            Log.d(TAG, "文件写入完成，总大小: " + totalBytes + " bytes");
         } catch (Exception e) {
-            return -1;
+            Log.e(TAG, "写入文件异常: " + e.getMessage());
+            throw e;
         }
     }
 

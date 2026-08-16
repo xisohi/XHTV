@@ -21,10 +21,8 @@ import java.util.List;
 
 @Entity(indices = @Index(value = {"url", "type"}, unique = true))
 public class Config {
-
     public static final String BUILTIN_URL = "https://xhys.xisohi.dpdns.org/XHYSyuan.json";
     public static final String BUILTIN_NAME = "内置源";
-
     @PrimaryKey(autoGenerate = true)
     @SerializedName("id")
     private int id;
@@ -95,17 +93,42 @@ public class Config {
 
     public static Config vod() {
         Config item = AppDatabase.get().getConfigDao().findOne(0);
-        return item == null ? create(0) : item;
+        // 如果数据库中没有配置，或者配置的 url 为空，则返回内置源
+        if (item == null || TextUtils.isEmpty(item.getUrl())) {
+            return create(0, BUILTIN_URL, BUILTIN_NAME);
+        }
+        return item;
     }
 
     public static Config live() {
         Config item = AppDatabase.get().getConfigDao().findOne(1);
-        return item == null ? create(1) : item;
+        // 直播也使用内置源（如果需要）
+        if (item == null || TextUtils.isEmpty(item.getUrl())) {
+            return create(1, BUILTIN_URL, BUILTIN_NAME);
+        }
+        return item;
     }
 
     public static Config wall() {
         Config item = AppDatabase.get().getConfigDao().findOne(2);
-        return item == null ? create(2) : item;
+        // 壁纸也使用内置源（如果需要）
+        if (item == null || TextUtils.isEmpty(item.getUrl())) {
+            return create(2, BUILTIN_URL, BUILTIN_NAME);
+        }
+        return item;
+    }
+
+    // ===== 判断是否为内置源 =====
+    public boolean isBuiltin() {
+        return BUILTIN_URL.equals(getUrl()) || BUILTIN_NAME.equals(getName());
+    }
+
+    // ===== 获取显示用的 URL（隐藏真实地址） =====
+    public String getDisplayUrl() {
+        if (isBuiltin() || TextUtils.isEmpty(getUrl())) {
+            return BUILTIN_NAME;
+        }
+        return getUrl();
     }
 
     public static Config find(int id) {
@@ -257,11 +280,6 @@ public class Config {
     }
 
     public String getDesc() {
-        // 只要 URL 等于内置源地址，就显示“内置源”
-        if (BUILTIN_URL.equals(getUrl())) {
-            return BUILTIN_NAME;
-        }
-        // 其他情况：优先显示自定义名称，否则显示 URL
         if (!TextUtils.isEmpty(getName())) return getName();
         if (!TextUtils.isEmpty(getUrl())) return getUrl();
         return "";

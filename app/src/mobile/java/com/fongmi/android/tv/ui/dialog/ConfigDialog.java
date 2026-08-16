@@ -72,17 +72,32 @@ public class ConfigDialog extends BaseAlertDialog {
 
     @Override
     protected void initView() {
-        binding.name.setText(getConfig().getName());
-        String realUrl = getConfig().getUrl();
-        ori = realUrl;  // 保存真实 URL，用于后续判断
+        Config config = getConfig();
+        if (config == null) return;
 
-        // 判断是否为内置源（点播类型且 URL 等于内置地址）
-        boolean isBuiltin = (type == 0 && Config.BUILTIN_URL.equals(realUrl));
-        // 编辑模式下，内置源显示“内置源”，否则显示真实 URL
-        String displayUrl = (edit && isBuiltin) ? Config.BUILTIN_NAME : realUrl;
+        // ===== 修改开始：获取显示用的 URL =====
+        String realUrl = config.getUrl();
+        String displayUrl = getDisplayUrl(realUrl);
+
+        // 保存原始 URL（用于编辑时判断）
+        ori = realUrl;
+
+        // 显示名称
+        binding.name.setText(config.getName());
+
+        // 显示 URL（内置源显示为"内置源"）
         binding.url.setText(displayUrl);
-        binding.input.setVisibility(edit ? View.VISIBLE : View.GONE);
         binding.url.setSelection(TextUtils.isEmpty(displayUrl) ? 0 : displayUrl.length());
+
+        binding.input.setVisibility(edit ? View.VISIBLE : View.GONE);
+    }
+
+    // ===== 新增：获取显示用的 URL =====
+    private String getDisplayUrl(String url) {
+        if (TextUtils.isEmpty(url) || Config.BUILTIN_URL.equals(url)) {
+            return Config.BUILTIN_NAME;
+        }
+        return url;
     }
 
     @Override
@@ -130,28 +145,42 @@ public class ConfigDialog extends BaseAlertDialog {
         }
     }
 
+    // ===== 修改 onPositive 方法 =====
     private void onPositive(DialogInterface dialog, int which) {
-        String urlText = binding.url.getText().toString().trim();
+        String inputText = binding.url.getText().toString().trim();
         String name = binding.name.getText().toString().trim();
 
-        String finalUrl;
-        boolean isBuiltin = (type == 0 && Config.BUILTIN_URL.equals(ori));
-        // 如果原始是内置源且用户输入的是“内置源”，则保存真实内置 URL
-        if (edit && isBuiltin && Config.BUILTIN_NAME.equals(urlText)) {
-            finalUrl = ori;
-        } else {
-            finalUrl = urlText;
+        // 如果用户输入的是"内置源"或空，则保存为空（触发内置源）
+        String finalUrl = inputText;
+        if (TextUtils.isEmpty(inputText) || Config.BUILTIN_NAME.equals(inputText)) {
+            finalUrl = "";
+            name = Config.BUILTIN_NAME;
         }
 
-        if (edit) Config.find(ori, type).url(finalUrl).name(name).update();
-        if (finalUrl.isEmpty()) Config.delete(ori, type);
+        // 编辑模式：更新已有配置
+        if (edit) {
+            Config.find(ori, type).url(finalUrl).name(name).update();
+        }
+
+        // 如果最终 URL 为空，删除原配置
+        if (finalUrl.isEmpty()) {
+            Config.delete(ori, type);
+        }
+
+        // 通知监听器
         ((ConfigListener) requireParentFragment()).setConfig(Config.find(finalUrl, type));
         dismiss();
     }
 
-    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
-        ((ConfigListener) requireParentFragment()).setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
-        dismiss();
-    });
+    private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
+                ((ConfigListener) requireParentFragment()).setConfig(Config.find(
+                        "file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""),
+                        type
+                ));
+                dismiss();
+            }
+    );
 }

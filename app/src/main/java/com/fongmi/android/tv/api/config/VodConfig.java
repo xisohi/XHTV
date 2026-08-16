@@ -70,23 +70,9 @@ public class VodConfig extends BaseConfig {
     }
 
     public VodConfig init() {
-        ensureBuiltinConfig();
         return config(Config.vod());
     }
 
-    /**
-     * 确保内置点播源存在，但仅在没有任何配置时自动生效。
-     * 如果用户已有配置（任意地址），则保留用户配置。
-     */
-    private void ensureBuiltinConfig() {
-        Config current = Config.vod();
-        // 只有当当前点播配置为空（无任何配置）时，才创建并激活内置源
-        if (current.isEmpty()) {
-            Config builtin = Config.find(Config.BUILTIN_URL, Config.BUILTIN_NAME, VOD);
-            builtin.update();
-        }
-    }
-    
     public VodConfig config(Config config) {
         this.config = config;
         return this;
@@ -125,7 +111,12 @@ public class VodConfig extends BaseConfig {
 
     @Override
     protected void load(Config config) throws Throwable {
-        String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
+        String url = config.getUrl();
+        // 如果 URL 为空，使用内置源
+        if (TextUtils.isEmpty(url)) {
+            url = Config.BUILTIN_URL;
+        }
+        String json = Decoder.getJson(UrlUtil.convert(url), TAG);
         checkJson(config, Json.parse(json).getAsJsonObject());
     }
 
