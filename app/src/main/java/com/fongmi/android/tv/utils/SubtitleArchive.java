@@ -37,7 +37,7 @@ public final class SubtitleArchive {
     }
 
     public static Download createDownload(String url) {
-        return Download.create(url, getFile(url)).maxBytes(MAX_DOWNLOAD_BYTES);
+        return Download.create(url, getFile(url));
     }
 
     public static List<File> unzip(File archive, File dir) {
