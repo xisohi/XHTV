@@ -47,33 +47,15 @@ public class Github {
         return "https://xhys.xisohi.dpdns.org/update/" + name + ".json";
     }
 
-    public static String getApk(String name) {
-        String githubUrl = "https://github.com/xisohi/XHYSosc/releases/download/fongmi/" + name + ".apk";
-        return getAcceleratedUrl(githubUrl);
-    }
-
     /**
-     * 获取加速后的 URL（同步等待测速完成）
+     * 返回原始 GitHub APK 下载地址（不含代理）
      */
-    private static String getAcceleratedUrl(String githubUrl) {
-        // 如果测速结果为空，先同步测速
-        if (speedRanking.isEmpty()) {
-            Log.d(TAG, "等待测速完成...");
-            speedTestProxiesSync();
-        }
-
-        if (!speedRanking.isEmpty()) {
-            String fastestProxy = PROXY_HOSTS[speedRanking.get(0)];
-            Log.d(TAG, "使用最快代理: " + fastestProxy);
-            return "https://" + fastestProxy + "/" + githubUrl;
-        }
-
-        Log.w(TAG, "测速失败，使用直连");
-        return githubUrl;
+    public static String getApk(String name) {
+        return "https://github.com/xisohi/XHYSosc/releases/download/fongmi/" + name + ".apk";
     }
 
     /**
-     * 按指定索引获取代理 URL（用于下载失败轮询）
+     * 按指定索引获取代理 URL
      */
     public static synchronized String getProxyUrlByIndex(String githubUrl, int index) {
         if (speedRanking.isEmpty()) {
@@ -91,14 +73,13 @@ public class Github {
      * 获取可用代理数量
      */
     public static synchronized int getProxyCount() {
-        return speedRanking.isEmpty() ? PROXY_HOSTS.length : speedRanking.size();
+        return speedRanking.isEmpty() ? 0 : speedRanking.size();
     }
 
     /**
      * 同步测速（公开方法，供 Updater 调用）
      */
     public static synchronized void speedTestProxiesSync() {
-        // 24小时内测速过且结果不为空，跳过
         if (System.currentTimeMillis() - lastSpeedTestTime < SPEED_TEST_INTERVAL && !speedRanking.isEmpty()) {
             Log.d(TAG, "测速缓存有效，跳过测速");
             return;

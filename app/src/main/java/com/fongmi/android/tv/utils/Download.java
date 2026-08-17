@@ -27,13 +27,11 @@ public class Download {
             .build();
 
     private final File file;
-    private String originalUrl;
     private String url;
     private Callback callback;
     private Future<?> future;
     private long maxBytes;
     private String tag;
-    private int retryIndex;
     private long downloadedBytes = 0;
 
     public static Download create(String url, File file) {
@@ -41,33 +39,19 @@ public class Download {
     }
 
     public Download(String url, File file) {
-        this.maxBytes = Long.MAX_VALUE;
-        this.tag = url;
         this.url = url;
         this.file = file;
-        this.retryIndex = 0;
-        this.originalUrl = extractOriginalUrl(url);
+        this.maxBytes = Long.MAX_VALUE;
+        this.tag = url;
         if (file.exists()) {
             this.downloadedBytes = file.length();
             Log.d(TAG, "发现已下载文件，大小: " + downloadedBytes + " bytes");
         } else {
             this.downloadedBytes = 0;
         }
-        Log.d(TAG, "原始 URL: " + originalUrl);
-        Log.d(TAG, "========== 创建下载任务 ==========");
-        Log.d(TAG, "下载 URL: " + url);
+        Log.d(TAG, "创建下载任务，URL: " + url);
         Log.d(TAG, "保存路径: " + file.getAbsolutePath());
         Log.d(TAG, "已下载: " + downloadedBytes + " bytes");
-    }
-
-    private String extractOriginalUrl(String url) {
-        if (url == null) return url;
-        for (String proxy : Github.PROXY_HOSTS) {
-            if (url.startsWith("https://" + proxy + "/")) {
-                return url.substring(("https://" + proxy + "/").length());
-            }
-        }
-        return url;
     }
 
     public Download tag(String tag) {
@@ -80,29 +64,25 @@ public class Download {
         return this;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String newUrl) {
+        this.url = newUrl;
+        Log.d(TAG, "更新下载 URL: " + newUrl);
+    }
+
     public File get() {
         doInBackground();
         return file;
     }
 
-    /**
-     * 开始下载（重置所有状态）
-     */
     public void start(Callback callback) {
         this.callback = callback;
-        this.retryIndex = 0;
-        this.url = this.originalUrl;
-        if (file.exists()) {
-            this.downloadedBytes = file.length();
-        } else {
-            this.downloadedBytes = 0;
-        }
         future = Task.submit(this::doInBackground);
     }
 
-    /**
-     * 重试下载（不重置 URL，用于代理切换后）
-     */
     public void retry() {
         if (file.exists()) {
             this.downloadedBytes = file.length();
@@ -110,31 +90,6 @@ public class Download {
             this.downloadedBytes = 0;
         }
         future = Task.submit(this::doInBackground);
-    }
-
-    /**
-     * 切换到下一个代理
-     */
-    public boolean switchToNextProxy() {
-        if (!originalUrl.contains("github.com")) {
-            return false;
-        }
-        int proxyCount = Github.getProxyCount();
-        if (proxyCount == 0) {
-            return false;
-        }
-        if (retryIndex >= proxyCount) {
-            Log.w(TAG, "所有代理已尝试完毕");
-            return false;
-        }
-        String newUrl = Github.getProxyUrlByIndex(originalUrl, retryIndex);
-        if (newUrl == null) {
-            return false;
-        }
-        this.url = newUrl;
-        Log.i(TAG, "切换到代理 " + (retryIndex + 1) + "/" + proxyCount + ": " + newUrl);
-        retryIndex++;
-        return true;
     }
 
     public Download cancel() {
