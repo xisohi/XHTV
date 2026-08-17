@@ -28,11 +28,10 @@ public class Updater implements Download.Callback, UpdateListener {
     private Download download;
     private UpdateDialog dialog;
 
-    private String originalApkUrl;      // 原始 GitHub URL（不含代理）
-    private int proxyRetryIndex = 0;    // 当前尝试的代理索引（0~n-1），-1 表示直连
+    private String originalApkUrl;
+    private int proxyRetryIndex = 0; // -1 表示直连
 
-    private Updater() {
-    }
+    private Updater() {}
 
     public static Updater create() {
         return new Updater();
@@ -46,7 +45,6 @@ public class Updater implements Download.Callback, UpdateListener {
         return Github.getJson("fongmi");
     }
 
-    // 不再使用 Github.getApk 的自动加速，自行控制
     private String getRawApkUrl() {
         return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
     }
@@ -56,7 +54,6 @@ public class Updater implements Download.Callback, UpdateListener {
             download.cancel();
             download = null;
         }
-        // 删除可能残留的旧文件，避免断点续传导致数据混乱
         File file = getFile();
         if (file.exists()) {
             file.delete();
@@ -73,7 +70,6 @@ public class Updater implements Download.Callback, UpdateListener {
                 finalUrl = proxyUrl;
                 Log.i(TAG, "使用代理 " + (proxyRetryIndex + 1) + "/" + Github.getProxyCount() + ": " + finalUrl);
             } else {
-                // 代理索引无效，回退直连
                 Log.w(TAG, "代理索引无效，回退直连");
                 proxyRetryIndex = -1;
                 finalUrl = originalApkUrl;
@@ -118,27 +114,16 @@ public class Updater implements Download.Callback, UpdateListener {
                 return;
             }
 
-            // 发现新版本，先同步测速（获取代理排序）
+            // ---------- 发现新版本，立即弹窗 ----------
             Log.i(TAG, "发现新版本! " + BuildConfig.VERSION_CODE + " -> " + code);
-            Log.i(TAG, "开始测速...");
-            Github.speedTestProxiesSync();
-            Log.i(TAG, "测速完成，代理状态: " + Github.getProxyStatus());
-
-            // 保存原始 APK URL
             originalApkUrl = getRawApkUrl();
-            // 重置重试索引
             proxyRetryIndex = 0;
 
-            // 显示更新对话框
             App.post(() -> show(activity, name, desc));
 
         } catch (Exception e) {
-            Log.e(TAG, "========== 更新检查失败 ==========");
-            Log.e(TAG, "错误类型: " + e.getClass().getSimpleName());
-            Log.e(TAG, "错误信息: " + e.getMessage());
-            Log.e(TAG, "完整堆栈:", e);
+            Log.e(TAG, "更新检查失败", e);
         }
-        Log.d(TAG, "========== 更新检查结束 ==========");
     }
 
     private void show(FragmentActivity activity, String version, String desc) {
@@ -153,12 +138,27 @@ public class Updater implements Download.Callback, UpdateListener {
     @Override
     public void onConfirm(View view) {
         view.setEnabled(false);
-        // 如果尚未获取原始 URL（极少数情况），再次获取
-        if (originalApkUrl == null) {
-            originalApkUrl = getRawApkUrl();
+
+        if (dialog != null) {
+            dialog.setStatus("正在选择最优下载线路...");
         }
-        proxyRetryIndex = 0;  // 从最快代理开始
-        startDownloadWithCurrentProxy();
+
+        Task.execute(() -> {
+            try {
+                Log.i(TAG, "开始测速...");
+                Github.speedTestProxiesSync();
+                Log.i(TAG, "测速完成，代理状态: " + Github.getProxyStatus());
+            } catch (Exception e) {
+                Log.e(TAG, "测速异常", e);
+            }
+            App.post(() -> {
+                if (dialog != null) {
+                    // 测速完成，准备下载，先显示“准备下载”状态，稍后进度更新会覆盖
+                    dialog.setStatus("准备下载…");
+                }
+                startDownloadWithCurrentProxy();
+            });
+        });
     }
 
     @Override
@@ -174,14 +174,23 @@ public class Updater implements Download.Callback, UpdateListener {
                 dialog.dismiss();
                 dialog = null;
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
     }
 
+    // ---------- Download.Callback 实现 ----------
     @Override
     public void progress(int progress) {
+        Log.d(TAG, "progress callback: " + progress + ", dialog=" + dialog);
         if (dialog != null) {
-            dialog.setProgress(progress);
+            // 只要进度 >= 0 就更新百分比，覆盖任何状态文字
+            if (progress >= 0) {
+                dialog.setProgress(progress);
+            } else {
+                // 如果传入负数（目前不会），可以显示其他状态
+                dialog.setStatus("下载中…");
+            }
+        } else {
+            Log.w(TAG, "dialog is null, cannot update progress");
         }
     }
 
@@ -189,24 +198,27 @@ public class Updater implements Download.Callback, UpdateListener {
     public void error(String msg) {
         Log.e(TAG, "下载失败: " + msg);
 
-        // 如果当前是代理模式（proxyRetryIndex >= 0），尝试下一个代理
         if (proxyRetryIndex >= 0) {
             int nextIndex = proxyRetryIndex + 1;
             if (nextIndex < Github.getProxyCount()) {
                 proxyRetryIndex = nextIndex;
                 Log.i(TAG, "切换到下一个代理，索引 " + proxyRetryIndex);
+                if (dialog != null) {
+                    dialog.setStatus("切换代理重试…");
+                }
                 startDownloadWithCurrentProxy();
                 return;
             } else {
-                // 所有代理均失败，尝试直连
                 Log.w(TAG, "所有代理均失败，尝试直连");
-                proxyRetryIndex = -1;   // 标记为直连模式
+                proxyRetryIndex = -1;
+                if (dialog != null) {
+                    dialog.setStatus("使用直连…");
+                }
                 startDownloadWithCurrentProxy();
                 return;
             }
         }
 
-        // 直连也失败，彻底放弃
         Notify.show(msg);
         dismiss();
     }

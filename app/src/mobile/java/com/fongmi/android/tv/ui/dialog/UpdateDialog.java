@@ -61,12 +61,29 @@ public class UpdateDialog extends BaseAlertDialog {
     public void onStart() {
         super.onStart();
         AlertDialog dialog = (AlertDialog) getDialog();
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(view -> listener.onCancel(view));
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> listener.onConfirm(view));
+        if (dialog != null) {dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(view -> listener.onCancel(view));
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> listener.onConfirm(view));
+        }
     }
 
+    /**
+     * 设置下载进度（百分比），自动显示为 "xx%"
+     * 仅当 progress >= 0 时更新，避免覆盖状态文字
+     */
     public void setProgress(int progress) {
         AlertDialog dialog = (AlertDialog) getDialog();
-        if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(String.format(Locale.getDefault(), "%1$d%%", progress));
+        if (dialog != null && progress >= 0) {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(String.format(Locale.getDefault(), "%1$d%%", progress));
+        }
+    }
+
+    /**
+     * 设置按钮状态文字（如“正在测速…”）
+     */
+    public void setStatus(String status) {
+        AlertDialog dialog = (AlertDialog) getDialog();
+        if (dialog != null && status != null) {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(status);
+        }
     }
 }
