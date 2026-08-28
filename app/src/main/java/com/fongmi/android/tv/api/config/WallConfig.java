@@ -92,7 +92,7 @@ public class WallConfig extends BaseConfig {
     }
 
     private void checkUrl(String url, File file) throws Throwable {
-        if (url.startsWith("file")) Path.copy(Path.local(url), file);
+        if (url.startsWith("file")) FileUtil.copyAtomically(Path.local(url), file);
         else Download.create(UrlUtil.convert(url), file).tag(TAG).get();
         if (!Path.exists(file)) throw new FileNotFoundException();
     }
@@ -105,7 +105,7 @@ public class WallConfig extends BaseConfig {
 
     private void setSnapshot(File file) throws Throwable {
         Bitmap bitmap = Glide.with(App.get()).asBitmap().frame(0).load(file).override(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE).submit().get();
-        try (FileOutputStream fos = new FileOutputStream(FileUtil.getWallCache())) {
+        try (FileOutputStream fos = new FileOutputStream(Path.wallCache())) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
         } finally {
             bitmap.recycle();
