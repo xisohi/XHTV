@@ -5,9 +5,15 @@ plugins {
     alias libs.plugins.android.application
 }
 
-def localProps = new Properties()
-rootProject.file('local.properties').withInputStream {
-    localProps.load(it)
+// ===== 自动生成 debug.keystore（如果不存在） =====
+def keystoreFile = file("$rootDir/debug.keystore")
+if (!keystoreFile.exists()) {
+    exec {
+        commandLine 'keytool', '-genkey', '-v', '-keystore', keystoreFile,
+                '-alias', 'androiddebugkey', '-keyalg', 'RSA', '-keysize', '2048',
+                '-validity', '10000', '-storepass', 'android', '-keypass', 'android',
+                '-dname', 'CN=Android Debug, O=Android, C=US'
+    }
 }
 
 android {
@@ -46,10 +52,10 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(localProps['storeFile'])
-            keyAlias localProps['keyAlias']
-            keyPassword localProps['storePassword']
-            storePassword localProps['storePassword']
+            storeFile keystoreFile
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
         }
     }
 
@@ -80,13 +86,13 @@ android {
     packagingOptions {
         jniLibs {
             pickFirsts += [
-                'lib/*/libavcodec.so',
-                'lib/*/libavformat.so',
-                'lib/*/libavutil.so',
-                'lib/*/libswresample.so',
-                'lib/*/libswscale.so',
-                'lib/*/libavfilter.so',
-                'lib/*/libavdevice.so',
+                    'lib/*/libavcodec.so',
+                    'lib/*/libavformat.so',
+                    'lib/*/libavutil.so',
+                    'lib/*/libswresample.so',
+                    'lib/*/libswscale.so',
+                    'lib/*/libavfilter.so',
+                    'lib/*/libavdevice.so',
             ]
         }
     }
@@ -180,4 +186,4 @@ dependencies {
 
     // Leanback UI (仅在 leanback flavor 中使用)
     leanbackImplementation "androidx.media3:media3-ui-leanback:$media3_version"
-    }
+}
