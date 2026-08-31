@@ -5,16 +5,6 @@ plugins {
     alias libs.plugins.android.application
 }
 
-def keystoreFile = file("$rootDir/debug.keystore")
-if (!keystoreFile.exists()) {
-    project.exec {
-        commandLine 'keytool', '-genkey', '-v', '-keystore', keystoreFile,
-                '-alias', 'androiddebugkey', '-keyalg', 'RSA', '-keysize', '2048',
-                '-validity', '10000', '-storepass', 'android', '-keypass', 'android',
-                '-dname', 'CN=Android Debug, O=Android, C=US'
-    }
-}
-
 android {
     namespace = 'com.fongmi.android.tv'
 
@@ -51,10 +41,11 @@ android {
 
     signingConfigs {
         release {
-            storeFile keystoreFile
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            // 复用 Android 插件内置的 debug 签名配置
+            storeFile = signingConfigs.debug.storeFile
+            storePassword = signingConfigs.debug.storePassword
+            keyAlias = signingConfigs.debug.keyAlias
+            keyPassword = signingConfigs.debug.keyPassword
         }
     }
 
@@ -143,16 +134,14 @@ dependencies {
     annotationProcessor libs.glide.compiler
     coreLibraryDesugaring libs.desugar
     // ===== Media3 依赖 (使用 Maven 坐标，复合构建会自动使用本地源码) =====
-    def media3_version = '1.11.0'  // 使用当前稳定版本
+    def media3_version = '1.11.0'
 
-    // 核心模块
     implementation "androidx.media3:media3-exoplayer:$media3_version"
     implementation "androidx.media3:media3-common:$media3_version"
     implementation "androidx.media3:media3-session:$media3_version"
     implementation "androidx.media3:media3-ui:$media3_version"
     implementation "androidx.media3:media3-cast:$media3_version"
 
-    // 扩展播放器
     implementation "androidx.media3:media3-exoplayer-dash:$media3_version"
     implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
     implementation "androidx.media3:media3-exoplayer-smoothstreaming:$media3_version"
@@ -160,11 +149,9 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-ima:$media3_version"
     implementation "androidx.media3:media3-exoplayer-workmanager:$media3_version"
 
-    // 数据源
     implementation "androidx.media3:media3-datasource:$media3_version"
     implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
 
-    // 解码器
     implementation "androidx.media3:media3-decoder:$media3_version"
     implementation "androidx.media3:media3-decoder-av1:$media3_version"
     implementation "androidx.media3:media3-decoder-ffmpeg:$media3_version"
@@ -174,7 +161,6 @@ dependencies {
     implementation "androidx.media3:media3-decoder-opus:$media3_version"
     implementation "androidx.media3:media3-decoder-vp9:$media3_version"
 
-    // 其他工具
     implementation "androidx.media3:media3-container:$media3_version"
     implementation "androidx.media3:media3-database:$media3_version"
     implementation "androidx.media3:media3-effect:$media3_version"
@@ -183,6 +169,5 @@ dependencies {
     implementation "androidx.media3:media3-muxer:$media3_version"
     implementation "androidx.media3:media3-mpvplayer:$media3_version"
 
-    // Leanback UI (仅在 leanback flavor 中使用)
     leanbackImplementation "androidx.media3:media3-ui-leanback:$media3_version"
 }
