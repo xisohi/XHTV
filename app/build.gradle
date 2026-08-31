@@ -5,10 +5,9 @@ plugins {
     alias libs.plugins.android.application
 }
 
-// ===== 自动生成 debug.keystore（如果不存在） =====
 def keystoreFile = file("$rootDir/debug.keystore")
 if (!keystoreFile.exists()) {
-    exec {
+    project.exec {
         commandLine 'keytool', '-genkey', '-v', '-keystore', keystoreFile,
                 '-alias', 'androiddebugkey', '-keyalg', 'RSA', '-keysize', '2048',
                 '-validity', '10000', '-storepass', 'android', '-keypass', 'android',
