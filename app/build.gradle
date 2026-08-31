@@ -4,12 +4,12 @@ import com.fongmi.gradle.AbiApkPackaging
 plugins {
     alias libs.plugins.android.application
 }
-/*
+
 def localProps = new Properties()
 rootProject.file('local.properties').withInputStream {
     localProps.load(it)
 }
-*/
+
 android {
     namespace = 'com.fongmi.android.tv'
 
@@ -43,7 +43,7 @@ android {
         buildConfig = true
         viewBinding = true
     }
-/*
+
     signingConfigs {
         release {
             storeFile file(localProps['storeFile'])
@@ -52,12 +52,12 @@ android {
             storePassword localProps['storePassword']
         }
     }
-*/
+
     buildTypes {
         release {
             minifyEnabled = true
             shrinkResources = true
-//            signingConfig = signingConfigs.release
+            signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
         }
     }
