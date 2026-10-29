@@ -30,7 +30,7 @@ public class BrowseTree {
     private static final String LIVE = "LIVE";
     public static final String VOD_KEEP = "VOD_KEEP";
     public static final String LIVE_KEEP = "LIVE_KEEP";
-    private static final MediaItem ROOT_ITEM = folder(ROOT, "影視");
+    private static final MediaItem ROOT_ITEM = folder(ROOT, "旭輝影視");
     private static final MediaItem VOD_FOLDER = build(VOD, true, false, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED, "點播", null, icon(R.drawable.ic_nav_vod), null);
     private static final MediaItem LIVE_FOLDER;
 
