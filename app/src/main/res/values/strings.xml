@@ -349,6 +349,7 @@
     <string name="player_preload_setting">Preload setting</string>
     <string name="player_preload">Preload</string>
     <string name="player_preload_next">Preload next episode</string>
+    <string name="player_preload_decoder">Decoder prewarming</string>
     <string name="player_preload_threads">Preload threads</string>
     <string name="player_preload_threads_value">%1$d threads</string>
     <string name="player_preload_size">Preload size</string>
@@ -357,6 +358,13 @@
     <string name="player_mpv_conf">mpv.conf</string>
     <string name="player_mpv_gpu_next">gpu-next</string>
     <string name="player_mpv_vulkan">vulkan</string>
+    <string name="player_motion_restart">Applies the next time you open a video</string>
+    <string name="player_mpv_motion">Frame interpolation (SDR)</string>
+    <string name="player_mpv_motion_unavailable">Interpolation is unavailable in this playback mode</string>
+    <string name="player_mpv_motion_applying">Applying…</string>
+    <string name="player_mpv_motion_target">Target: %1$d fps</string>
+    <string name="player_mpv_motion_capped">Target: %1$.2f fps (display limit)</string>
+    <string name="player_mpv_motion_failed">Unable to change interpolation</string>
     <string name="player_mpv_conf_priority_hint">Reopen playback to load mpv.conf. Media options, scripts, and controls can change settings afterward; the last write applies. volume is the control volume baseline.</string>
     <string name="player_mpv_conf_conflict_hint">Player controls manage: %1$s. Media options, scripts, and controls follow the last write; volume is the control volume baseline.</string>
     <string name="player_mpv_conf_import_success">Loaded mpv.conf. Tap OK to save.</string>
@@ -398,6 +406,8 @@
     <string name="error_play_parse">Unable to parse url</string>
     <string name="error_play_drm">This device does not support the required DRM scheme</string>
     <string name="error_play_url">Unable to load url</string>
+    <string name="error_episode_missing">Cannot restore the saved episode. Select another episode.</string>
+    <string name="error_episode_not_found">Cannot find the requested episode. Select another episode.</string>
     <string name="error_play_flag">No flag data</string>
     <string name="error_play_timeout">Timed out</string><string name="error_audio_effect_unsupported">Audio settings are unavailable for the current playback mode</string>
     <string name="bdj_preparing">Preparing BD-J menu</string>
@@ -452,6 +462,12 @@
     <string-array name="select_engine">
         <item>EXO</item>
         <item>MPV</item>
+    </string-array>
+
+    <string-array name="select_mpv_motion">
+        <item>@string/setting_off</item>
+        <item>60 fps</item>
+        <item>120 fps</item>
     </string-array>
 
     <string-array name="select_render">

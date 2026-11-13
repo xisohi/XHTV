@@ -21,7 +21,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
-import androidx.media3.common.VideoSize;
 import androidx.media3.common.text.SubtitleContent;
 import androidx.media3.common.text.SubtitleOffsets;
 import androidx.media3.common.text.SubtitleSelectionState;
@@ -80,13 +79,13 @@ public class PlayerManager implements ParseCallback {
     private PendingPreload pendingPreload;
     private PendingPreload queuedPreload;
     private PlayerEngine engine;
-    private VideoSize videoSize;
     private ParseJob parseJob;
     private PlaySpec spec;
     private Player player;
     private String playbackId;
     private long playbackAttempt;
     private float speedBeforePress = Float.NaN;
+    private long danmakuTimeOffsetMs;
 
     private long pendingStartPositionMs;
     private Result browseResult;
@@ -284,7 +283,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public boolean canPreloadNext() {
-        return PreloadSetting.isEnabled() && PreloadSetting.isNextEpisodeEnabled() && engine != null && engine.getType() == PlayerEngine.Type.EXO && !player.isCurrentMediaItemLive() && !player.getDiscMenuState().navigationPlaybackOngoing && (spec == null || !IsoDiscPreparation.isIso(MediaItemFactory.from(spec)));
+        return PreloadSetting.shouldPreloadNextEpisode() && engine != null && engine.getType() == PlayerEngine.Type.EXO && !player.isCurrentMediaItemLive() && !player.getDiscMenuState().navigationPlaybackOngoing && (spec == null || !IsoDiscPreparation.isIso(MediaItemFactory.from(spec)));
     }
 
     public boolean isPortrait() {
@@ -332,11 +331,11 @@ public class PlayerManager implements ParseCallback {
     }
 
     public int getVideoWidth() {
-        return videoSize == null ? 0 : videoSize.width;
+        return player == null ? 0 : player.getVideoSize().width;
     }
 
     public int getVideoHeight() {
-        return videoSize == null ? 0 : videoSize.height;
+        return player == null ? 0 : player.getVideoSize().height;
     }
 
     public long getPosition() {
@@ -450,7 +449,12 @@ public class PlayerManager implements ParseCallback {
         player.selectEdition(edition);
     }
 
+    public DanmakuConfig getDanmakuConfig() {
+        return DanmakuSetting.getConfig().buildUpon().setTimeOffsetMs(danmakuTimeOffsetMs).build();
+    }
+
     public void setDanmakuConfig(DanmakuConfig config) {
+        danmakuTimeOffsetMs = config.timeOffsetMs;
         callback.onDanmakuConfigChanged(config);
     }
 
@@ -625,6 +629,12 @@ public class PlayerManager implements ParseCallback {
         endSpeedPress();
         clearPreload();
         player.clearMediaItems();
+        resetPlaybackSettings();
+    }
+
+    private void resetPlaybackSettings() {
+        setSpeed(SpeedSetting.NORMAL);
+        setDanmakuConfig(DanmakuSetting.getConfig());
     }
 
     public void prepareForReplacement() {
@@ -693,7 +703,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public boolean preload(PlaySpec spec, long startPositionMs, Object tag) {
-        if (!canPreloadNext() || spec == null || !PlayerEngineFactory.canPreload(spec) || !PlayerEngineFactory.matches(engine, spec)) return false;
+        if (!canPreloadNext() || spec == null || !PlayerEngineFactory.canPreload(engine, spec)) return false;
         clearPreload();
         PendingPreload preload = new PendingPreload(spec.checkUa(), Math.max(0, startPositionMs), tag);
         pendingPreload = preload;
@@ -810,6 +820,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void start(PlaySpec spec, long timeout, long startPositionMs) {
+        stopParse();
         this.spec = spec;
         setMediaItem(timeout, startPositionMs, true);
     }
@@ -846,9 +857,12 @@ public class PlayerManager implements ParseCallback {
         endSpeedPress();
         if (newMedia && refreshAttempted) spec.refresh();
         if (newMedia) mpvDrmExoFallback = false;
+        MediaItem current = player.getCurrentMediaItem();
+        boolean newContent = newMedia && (current == null || !TextUtils.equals(current.mediaId, spec.getKey()));
         boolean playWhenReady = player.getPlayWhenReady();
         ensureEngine(spec.checkUa());
         if (newMedia) timeshift.start(spec);
+        if (newContent) resetPlaybackSettings();
         beginPlaybackAttempt(newMedia);
         if (newMedia) engine.prepareForNewMedia();
         pendingPreload = null;
@@ -1123,11 +1137,6 @@ public class PlayerManager implements ParseCallback {
                 App.removeCallbacks(runnable);
                 clearPreload();
             }
-        }
-
-        @Override
-        public void onVideoSizeChanged(@NonNull VideoSize size) {
-            videoSize = size;
         }
 
         @Override

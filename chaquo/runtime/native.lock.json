@@ -1,15 +1,19 @@
 {
   "repository": "FongMi/python-android",
-  "tag": "v1.0.0",
-  "commit": "70af17a8da2945219844dbc38ac490e03002409e",
+  "tag": "v1.1.0",
+  "commit": "4cabf1d1bce37d1fc517d939c54b8087af8f9cd3",
   "manifests": {
     "wheels": {
       "file": "wheels-manifest.json",
-      "sha256": "b8d892531c624e74ce263877ea493aa766ccb7ac91571a505560908e8e87e9f3"
+      "sha256": "cee4990209d4f823a91f95172e1e22349ca2ed18f271f05e2dd4288c16bee0e0"
     },
     "native-bundles": {
       "file": "native-bundles-manifest.json",
-      "sha256": "89571a2574810826713e274677fd362b400581dacecb97990c8cf316355c2473"
+      "sha256": "2eba31a2863cd007440610655633c862d3692a942468ebd6dbc0e7e05423ec1e"
+    },
+    "pure-wheels": {
+      "file": "pure-wheels-manifest.json",
+      "sha256": "eaf95fcc0a8ae65640c36fbbc98bcc61131414523a8060f9a0dbba8d859e5a79"
     }
   }
 }

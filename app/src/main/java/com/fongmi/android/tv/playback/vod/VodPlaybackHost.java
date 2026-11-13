@@ -24,7 +24,15 @@ public interface VodPlaybackHost {
 
     String getVodMark();
 
+    String getVodPlayId();
+
+    void clearVodPlayId();
+
     String getHistoryKey();
+
+    default History takeCastHistory() {
+        return null;
+    }
 
     boolean isSiteChangeable();
 

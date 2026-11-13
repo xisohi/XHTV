@@ -121,7 +121,12 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
 
     @Override
     public boolean needsRebuild() {
-        return session.hasLibassSettingChanged();
+        return session.hasSettingsChanged();
+    }
+
+    @Override
+    public boolean canReuseForPreload() {
+        return !session.hasPlaybackSettingsChanged();
     }
 
     @Override

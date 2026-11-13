@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import com.github.catvod.Runtime;
 import com.github.catvod.crawler.SpiderDebug;
 import com.github.catvod.utils.Json;
+import com.github.catvod.utils.Task;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -32,12 +33,14 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -64,6 +67,7 @@ public final class Net implements AutoCloseable {
 
     @Keep
     public interface Cookies {
+
         String getCookie(String url);
 
         boolean setCookie(String url, String cookie);
@@ -74,11 +78,7 @@ public final class Net implements AutoCloseable {
         R apply(T item, int index) throws Exception;
     }
 
-    static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(runnable -> {
-        Thread thread = new Thread(runnable, "Spider WebSocket timeout");
-        thread.setDaemon(true);
-        return thread;
-    });
+    static final ScheduledExecutorService DEADLINES = deadlines();
 
     private final Cookies cookies;
     private final OkHttpClient client;
@@ -93,6 +93,16 @@ public final class Net implements AutoCloseable {
     private final Set<NetMap<?, ?>> maps = new HashSet<>();
     private final NetCache cache;
     private boolean closed;
+
+    private static ScheduledExecutorService deadlines() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, runnable -> {
+            Thread thread = new Thread(runnable, "Spider network deadline");
+            thread.setDaemon(true);
+            return thread;
+        });
+        executor.setRemoveOnCancelPolicy(true);
+        return executor;
+    }
 
     public Net() {
         this(null);
@@ -191,12 +201,6 @@ public final class Net implements AutoCloseable {
         return error;
     }
 
-    static <T> CompletableFuture<T> failedFuture(Throwable error) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        future.completeExceptionally(error);
-        return future;
-    }
-
     private CompletableFuture<String> load(Callable<String> loader) {
         CompletableFuture<String> loading = new CompletableFuture<>();
         FutureTask<Void> task = new FutureTask<>(() -> {
@@ -217,7 +221,7 @@ public final class Net implements AutoCloseable {
 
     public CompletableFuture<String> cachedAsync(String key, String options, Supplier<CompletableFuture<String>> loader) {
         synchronized (lock) {
-            if (closed) return failedFuture(new InterruptedIOException("Network owner closed"));
+            if (closed) return Task.failedFuture(new InterruptedIOException("Network owner closed"));
         }
         return cache.cached(key, CacheOptions.from(options), loader);
     }
@@ -225,11 +229,6 @@ public final class Net implements AutoCloseable {
     public String peek(String key) {
         checkOpen();
         return cache.peek(key);
-    }
-
-    public String cachedValue(String key, String options) {
-        checkOpen();
-        return cache.value(key, CacheOptions.from(options));
     }
 
     public void refresh(String key, String options, Callable<String> loader) {
@@ -248,6 +247,10 @@ public final class Net implements AutoCloseable {
 
     public void clearCache(String key) {
         cache.clear(key);
+    }
+
+    public boolean invalidateCache(String key, String expected) {
+        return cache.invalidate(key, expected);
     }
 
     public void clearCache() {
@@ -367,13 +370,11 @@ public final class Net implements AutoCloseable {
 
     public <T, R> List<R> map(List<T> items, Mapper<T, R> mapper, int limit) throws Exception {
         if (items == null || mapper == null || limit < 1) throw new IllegalArgumentException("Invalid map options");
-        NetMap<T, R> mapping;
-        synchronized (lock) {
+        if (items.isEmpty()) {
             checkOpen();
-            if (items.isEmpty()) return new ArrayList<>();
-            mapping = new NetMap<>(items, mapper, limit, this::removeMap);
-            maps.add(mapping);
+            return new ArrayList<>();
         }
+        NetMap<T, R> mapping = createMap(items, mapper, limit);
         try {
             return mapping.start().get();
         } catch (InterruptedException error) {
@@ -383,6 +384,15 @@ public final class Net implements AutoCloseable {
             if (error.getCause() instanceof Exception cause) throw cause;
             if (error.getCause() instanceof Error cause) throw cause;
             throw new IllegalStateException(error.getCause());
+        }
+    }
+
+    private <T, R> NetMap<T, R> createMap(List<T> items, Mapper<T, R> mapper, int limit) {
+        synchronized (lock) {
+            checkOpen();
+            NetMap<T, R> mapping = new NetMap<>(items, mapper, limit, this::removeMap);
+            maps.add(mapping);
+            return mapping;
         }
     }
 
@@ -402,30 +412,25 @@ public final class Net implements AutoCloseable {
 
     private Result[] batch(JsonArray requests, int limit) throws IOException {
         validateBatch(requests, limit);
-        Result[] results = new Result[requests.size()];
-        List<CompletableFuture<Result>> active = new ArrayList<>();
+        if (requests.isEmpty()) {
+            checkOpen();
+            return new Result[0];
+        }
+        NetMap<JsonElement, Result> mapping = createMap(requests.asList(), (value, index) -> batchRequest(value.getAsJsonObject()), limit);
         try {
-            for (int start = 0; start < requests.size(); start += active.size()) {
-                active.clear();
-                enqueueBatch(requests, start, limit, active);
-                awaitBatch(active, results, start);
-            }
-            return results;
+            return mapping.start().get().toArray(Result[]::new);
         } catch (InterruptedException e) {
             throw interrupted(e);
         } catch (ExecutionException e) {
             throw new IOException(e.getCause());
         } finally {
-            for (CompletableFuture<Result> request : active) if (!request.isDone()) request.cancel(true);
+            mapping.cancel();
         }
     }
 
-    private void enqueueBatch(JsonArray requests, int start, int limit, List<CompletableFuture<Result>> active) {
-        for (int index = start; index < requests.size() && active.size() < limit; index++) {
-            JsonObject item = requests.get(index).getAsJsonObject();
-            String url = item.get("url").getAsString();
-            active.add(requestAsync(url, NetOptions.from(item.get("options") == null ? null : item.get("options").toString())));
-        }
+    private Result batchRequest(JsonObject item) {
+        String url = item.get("url").getAsString();
+        return request(url, NetOptions.from(item.get("options") == null ? null : item.get("options").toString()));
     }
 
     private void validateBatch(JsonArray requests, int limit) {
@@ -438,10 +443,6 @@ public final class Net implements AutoCloseable {
         JsonObject item = value.getAsJsonObject();
         JsonElement url = item.get("url"), options = item.get("options");
         if (url == null || !url.isJsonPrimitive() || !url.getAsJsonPrimitive().isString() || options != null && !options.isJsonNull() && !options.isJsonObject()) throw new IllegalArgumentException("Invalid batch request");
-    }
-
-    private void awaitBatch(List<CompletableFuture<Result>> active, Result[] results, int start) throws InterruptedException, ExecutionException {
-        for (int index = 0; index < active.size(); index++) results[start + index] = active.get(index).get();
     }
 
     public Object[][] batchParts(String requests, int limit) throws IOException {
@@ -470,7 +471,6 @@ public final class Net implements AutoCloseable {
 
     public CompletableFuture<String> downloadAsync(String url, String json, File file) {
         File target = file.isAbsolute() ? file : new File(Runtime.context().getCacheDir(), file.getPath());
-        CompletableFuture<String> future = new CompletableFuture<>();
         NetOptions options;
         Download download;
         Call call;
@@ -478,16 +478,15 @@ public final class Net implements AutoCloseable {
             options = NetOptions.from(json);
             download = createDownload(url, target, options);
         } catch (Exception e) {
-            future.completeExceptionally(e);
-            return future;
+            return Task.failedFuture(e);
         }
         try {
             call = newDownloadCall(download, options);
         } catch (Exception e) {
             closeDownload(download, e);
-            future.completeExceptionally(e);
-            return future;
+            return Task.failedFuture(e);
         }
+        CompletableFuture<String> future = new CompletableFuture<>();
         future.whenComplete((result, error) -> {
             if (future.isCancelled()) cancelDownload(call, download);
         });
@@ -582,9 +581,7 @@ public final class Net implements AutoCloseable {
         } catch (Exception e) {
             return CompletableFuture.completedFuture(Result.failure(e));
         }
-        future.whenComplete((result, error) -> {
-            if (future.isCancelled()) call.cancel();
-        });
+        bindDeadline(call, options, future, () -> future.complete(Result.failure(new SocketTimeoutException())));
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -613,16 +610,14 @@ public final class Net implements AutoCloseable {
     }
 
     public CompletableFuture<StreamResult> requestStreamAsync(String url, NetOptions options) {
-        CompletableFuture<StreamResult> future = new CompletableFuture<>();
         Call call;
         try {
             call = newCall(url, options);
         } catch (Exception error) {
-            return failedFuture(error);
+            return Task.failedFuture(error);
         }
-        future.whenComplete((result, error) -> {
-            if (future.isCancelled()) call.cancel();
-        });
+        CompletableFuture<StreamResult> future = new CompletableFuture<>();
+        bindDeadline(call, options, future, () -> future.completeExceptionally(new SocketTimeoutException()));
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException error) {
@@ -636,6 +631,23 @@ public final class Net implements AutoCloseable {
             }
         });
         return future;
+    }
+
+    private void bindDeadline(Call call, NetOptions options, CompletableFuture<?> future, BooleanSupplier expire) {
+        int timeout = options.getCallTimeout();
+        ScheduledFuture<?> timer = timeout == 0 ? null : scheduleDeadline(call, timeout, expire);
+        future.whenComplete((result, error) -> {
+            if (timer != null) timer.cancel(false);
+            if (future.isCancelled()) call.cancel();
+        });
+    }
+
+    private ScheduledFuture<?> scheduleDeadline(Call call, int timeout, BooleanSupplier expire) {
+        long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeout);
+        call.timeout().deadlineNanoTime(end);
+        return DEADLINES.schedule(() -> client.dispatcher().executorService().execute(() -> {
+            if (expire.getAsBoolean()) call.cancel();
+        }), end - System.nanoTime(), TimeUnit.NANOSECONDS);
     }
 
     private void acceptStream(Call call, Response response, CompletableFuture<StreamResult> future) {
@@ -984,10 +996,10 @@ public final class Net implements AutoCloseable {
 
         public CompletableFuture<Integer> readAsync(ByteBuffer bytes) {
             if (bytes == null || bytes.isReadOnly() || !bytes.hasRemaining() || bytes.remaining() > 1024 * 1024) throw new IllegalArgumentException("Read requires a writable range of 1..1048576 bytes");
-            if (!reading.compareAndSet(false, true)) return failedFuture(new IllegalStateException("Stream read already pending"));
+            if (!reading.compareAndSet(false, true)) return Task.failedFuture(new IllegalStateException("Stream read already pending"));
             if (finished.get()) {
                 endRead();
-                return failedFuture(new IOException("Response stream closed"));
+                return Task.failedFuture(new IOException("Response stream closed"));
             }
             CompletableFuture<Integer> result = new CompletableFuture<>();
             result.whenComplete((value, error) -> {

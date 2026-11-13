@@ -14,6 +14,7 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.bean.Filter;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Style;
@@ -30,6 +31,7 @@ import com.fongmi.android.tv.ui.custom.CustomScroller;
 import com.fongmi.android.tv.utils.ResUtil;
 
 import java.util.HashMap;
+import java.util.List;
 
 public class TypeFragment extends BaseFragment implements CustomScroller.Callback, VodAdapter.OnClickListener, SwipeRefreshLayout.OnRefreshListener {
 
@@ -175,6 +177,17 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         onRefresh();
     }
 
+    public List<Filter> getFilters() {
+        return getParent().getType().getFilters().stream().map(this::copyFilter).toList();
+    }
+
+    private Filter copyFilter(Filter filter) {
+        Filter copy = filter.copy();
+        Value selected = mExtends.containsKey(copy.getKey()) ? Value.create(mExtends.get(copy.getKey())) : null;
+        copy.getValue().forEach(value -> value.setSelected(value.equals(selected)));
+        return copy;
+    }
+
     @Override
     public void onRefresh() {
         if (isHome()) getHome();
@@ -196,7 +209,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             getParent().openFolder(item.getId(), mExtends);
         } else {
             if (getSite().isIndex()) SearchActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null);
+            else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null);
         }
     }
 

@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import json
 import os
@@ -40,6 +41,10 @@ def asset_name(name):
 
 def read_manifest(data, lock, kind):
     manifest = json.loads(data)
+    if kind == "pure-wheels":
+        if len(manifest["wheels"]) != 1:
+            raise ValueError("Incomplete pure Python wheels")
+        return manifest
     producer = manifest["producer"]
     if any(producer[key] != lock[key] for key in ["repository", "commit", "tag"]):
         raise ValueError(f"Python producer mismatch: {kind}")
@@ -48,27 +53,34 @@ def read_manifest(data, lock, kind):
     return manifest
 
 
+def manifest_entries(manifest, kind):
+    if kind == "pure-wheels":
+        yield from manifest["wheels"]
+        return
+    for abi, report in manifest["abis"].items():
+        if report["abi"] != abi:
+            raise ValueError(f"Python ABI mismatch: {kind}")
+        entries = report["wheels"] if kind == "wheels" else [report]
+        if not entries:
+            raise ValueError(f"Missing Python assets: {kind}/{abi}")
+        yield from entries
+
+
 def collect_assets(lock, directory, base):
     assets = {}
     manifests = {}
-    for kind in ["wheels", "native-bundles"]:
+    for kind in ["wheels", "native-bundles", "pure-wheels"]:
         source = lock["manifests"][kind]
         name = asset_name(source["file"])
         data = verified_bytes(directory / kind / "manifest.json", base + name, source["sha256"])
         manifest = read_manifest(data, lock, kind)
         manifests[kind] = data
-        for abi, report in manifest["abis"].items():
-            if report["abi"] != abi:
-                raise ValueError(f"Python ABI mismatch: {kind}")
-            entries = report["wheels"] if kind == "wheels" else [report]
-            if not entries:
-                raise ValueError(f"Missing Python assets: {kind}/{abi}")
-            for entry in entries:
-                name = asset_name(entry["file"])
-                key = (kind, name)
-                if key in assets:
-                    raise ValueError(f"Duplicate Python asset: {name}")
-                assets[key] = entry["sha256"]
+        for entry in manifest_entries(manifest, kind):
+            name = asset_name(entry["file"])
+            key = (kind, name)
+            if key in assets:
+                raise ValueError(f"Duplicate Python asset: {name}")
+            assets[key] = entry["sha256"]
     return assets, manifests
 
 
@@ -95,12 +107,12 @@ def install_assets(kind, data, directory, staging):
     os.replace(metadata, folder / "manifest.json")
 
 
-def sync(lock_file, directory):
+def sync(lock_file, directory, source=None):
     lock = json.loads(lock_file.read_text(encoding="utf-8"))
     repository = lock["repository"]
     if repository.count("/") != 1 or any(value in repository for value in ["..", "\\", ":", "?", "#"]):
         raise ValueError("Invalid Python producer repository")
-    base = f"https://github.com/{repository}/releases/download/{urllib.parse.quote(lock['tag'], safe='')}/"
+    base = source.resolve().as_uri() + "/" if source is not None else f"https://github.com/{repository}/releases/download/{urllib.parse.quote(lock['tag'], safe='')}/"
     directory.mkdir(parents=True, exist_ok=True)
     assets, manifests = collect_assets(lock, directory, base)
     with tempfile.TemporaryDirectory(prefix="python-sync-", dir=directory) as temporary:
@@ -114,4 +126,7 @@ def sync(lock_file, directory):
 
 
 if __name__ == "__main__":
-    print(json.dumps(sync(ROOT / "chaquo/runtime/native.lock.json", ROOT / "chaquo/runtime"), indent=2))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", type=Path, help="Directory containing the CI release artifact")
+    args = parser.parse_args()
+    print(json.dumps(sync(ROOT / "chaquo/runtime/native.lock.json", ROOT / "chaquo/runtime", args.source), indent=2))

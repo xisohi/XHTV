@@ -1,7 +1,6 @@
 import json
 from threading import Lock
 
-
 _loader_type = None
 _loader_lock = Lock()
 _listener_type = None
@@ -50,9 +49,9 @@ def _invalid_constant(value):
 
 def _milliseconds(value, name):
     if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError("%s requires integer milliseconds" % name)
+        raise TypeError(f"{name!s} requires integer milliseconds")
     if value < 0 or value > 9223372036854775807:
-        raise ValueError("%s milliseconds must be between 0 and Long.MAX_VALUE" % name)
+        raise ValueError(f"{name!s} milliseconds must be between 0 and Long.MAX_VALUE")
     return value
 
 
@@ -60,7 +59,7 @@ def _cache_options(options, name):
     _milliseconds(options.get("ttl"), name)
     for flag in ("stale", "persist"):
         if flag in options and not isinstance(options[flag], bool):
-            raise TypeError("%s %s requires a boolean" % (name, flag))
+            raise TypeError(f"{name!s} {flag!s} requires a boolean")
 
 
 def _loader_class():
@@ -68,7 +67,9 @@ def _loader_class():
     with _loader_lock:
         if _loader_type is None:
             from java import dynamic_proxy
+            from java.lang import Throwable
             from java.util.concurrent import Callable
+            from com.fongmi.chaquo import CacheException
 
             class Loader(dynamic_proxy(Callable)):
                 def __init__(self, loader):
@@ -76,7 +77,12 @@ def _loader_class():
                     self._loader = loader
 
                 def call(self):
-                    return json.dumps(self._loader(), ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+                    try:
+                        return json.dumps(self._loader(), ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+                    except Throwable:
+                        raise
+                    except BaseException as error:
+                        raise CacheException(error) from None
 
             _loader_type = Loader
         return _loader_type
@@ -228,11 +234,14 @@ class NetAdapter:
         _cache_options(options, "cached")
         if not callable(loader):
             raise TypeError("cached requires a callable loader")
+        from com.fongmi.chaquo import CacheException
+
         options = json.dumps(options)
-        value = self._native.cachedValue(key, options)
-        if value is None:
-            value = self._native.cached(key, options, _loader_class()(loader))
-        return value
+        try:
+            return self._native.cached(key, options, _loader_class()(loader))
+        except CacheException as failure:
+            error = failure.error()
+        raise error
 
     def clearCache(self, key=None):
         self._native.clearCache(key)
@@ -271,15 +280,13 @@ class NetAdapter:
         return self._request(self._native.reqParts, url, options)
 
     def batch(self, requests, limit=4):
-        if (not isinstance(requests, list) or isinstance(limit, bool)
-                or not isinstance(limit, int) or limit < 1):
+        if not isinstance(requests, list) or isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
             raise ValueError("batch requires a request list and positive limit")
         for item in requests:
-            if (not isinstance(item, dict) or not isinstance(item.get("url"), str)
-                    or item.get("options") is not None and not isinstance(item["options"], dict)):
+            if not isinstance(item, dict) or not isinstance(item.get("url"), str) or item.get("options") is not None and not isinstance(item["options"], dict):
                 raise ValueError("Invalid batch request")
         values = self._native.batchParts(json.dumps(requests, ensure_ascii=False, allow_nan=False), limit)
-        return [self._parts(value, item.get("options") or {}) for value, item in zip(values, requests)]
+        return [self._parts(value, item.get("options") or {}) for value, item in zip(values, requests, strict=True)]
 
     def map(self, items, mapper, limit=4):
         if not isinstance(items, list) or not callable(mapper) or type(limit) is not int or not 1 <= limit <= 2147483647:
@@ -293,6 +300,7 @@ class NetAdapter:
 
     def download(self, url, path, options=None):
         from java.io import File
+
         settings = json.dumps({} if options is None else options, ensure_ascii=False, allow_nan=False)
         self._native.download(url, settings, File(str(path)))
 

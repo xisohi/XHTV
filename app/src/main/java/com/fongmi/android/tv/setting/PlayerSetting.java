@@ -5,6 +5,7 @@ import static androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT;
 import static androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM;
 
 import com.github.catvod.utils.Prefers;
+import com.github.catvod.utils.RuntimeModule;
 
 public class PlayerSetting {
 
@@ -22,7 +23,11 @@ public class PlayerSetting {
     private static final int MAX_BACKGROUND = 2;
 
     public static int getEngine() {
-        return Math.clamp(Prefers.getInt("player_engine", ENGINE_EXO), ENGINE_EXO, ENGINE_MPV);
+        return Math.clamp(Prefers.getInt("player_engine", ENGINE_EXO), ENGINE_EXO, getEngineCount() - 1);
+    }
+
+    public static int getEngineCount() {
+        return RuntimeModule.MPV.isInstalled() ? ENGINE_MPV + 1 : ENGINE_EXO + 1;
     }
 
     public static void putEngine(int engine) {
@@ -68,6 +73,38 @@ public class PlayerSetting {
 
     public static void putMpvVulkan(boolean vulkan) {
         Prefers.put("mpv_vulkan", vulkan);
+    }
+
+    public static int getMpvMotion() {
+        return Math.clamp(Prefers.getInt("mpv_motion"), 0, 2);
+    }
+
+    public static void putMpvMotion(int motion) {
+        Prefers.put("mpv_motion", Math.clamp(motion, 0, 2));
+    }
+
+    public static int getMpvMotionFps() {
+        return getMotionFps(getMpvMotion());
+    }
+
+    public static int getExoMotion() {
+        return Math.clamp(Prefers.getInt("exo_motion"), 0, 2);
+    }
+
+    public static void putExoMotion(int motion) {
+        Prefers.put("exo_motion", Math.clamp(motion, 0, 2));
+    }
+
+    public static int getExoMotionFps() {
+        return getMotionFps(getExoMotion());
+    }
+
+    private static int getMotionFps(int motion) {
+        return switch (motion) {
+            case 1 -> 60;
+            case 2 -> 120;
+            default -> 0;
+        };
     }
 
     public static int getRender() {

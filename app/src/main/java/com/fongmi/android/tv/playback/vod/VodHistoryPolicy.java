@@ -11,12 +11,18 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.utils.SourceUrl;
 import com.github.catvod.utils.Task;
 
 public class VodHistoryPolicy {
 
-    public History findOrCreate(String key, String mark, Vod item) {
-        History history = History.find(key);
+    public History findOrCreate(String key, String mark, Vod item, History history) {
+        if (history == null) {
+            history = History.find(key);
+        } else if (!key.equals(history.getKey())) {
+            history.setKey(key);
+            history.setCid(VodConfig.getCid());
+        }
         history = history == null ? create(key, item) : history;
         if (!TextUtils.isEmpty(mark)) history.setVodRemarks(mark);
         if (Setting.isIncognito()) history.delete();
@@ -88,13 +94,26 @@ public class VodHistoryPolicy {
     }
 
     public void updateEpisode(History history, Flag flag, Episode episode) {
+        updateEpisode(history, flag, episode, false);
+    }
+
+    public void updateEpisode(History history, Flag flag, Episode episode, boolean matchId) {
         if (history == null || flag == null || episode == null) return;
-        boolean match = episode.matchesName(history.getEpisode());
+        boolean match = matchId ? episode.getUrl().equals(history.getEpisodeUrl()) : matchesEpisode(history, flag, episode);
         if (!match) history.setPosition(C.TIME_UNSET);
         if (!match) history.setDuration(C.TIME_UNSET);
         history.setVodFlag(flag.getFlag());
         history.setVodRemarks(episode.getName());
         history.setEpisodeUrl(episode.getUrl());
+    }
+
+    private boolean matchesEpisode(History history, Flag flag, Episode episode) {
+        String previous = history.getEpisodeUrl();
+        String current = episode.getUrl();
+        boolean previousResolved = SourceUrl.isResolved(previous);
+        boolean currentResolved = SourceUrl.isResolved(current);
+        if (!previousResolved && !currentResolved) return episode.matchesName(history.getEpisode());
+        return previousResolved && currentResolved && flag.getFlag().equals(history.getVodFlag()) && SourceUrl.same(previous, current);
     }
 
     public void updateProgress(History history, long time, long position, long duration) {
