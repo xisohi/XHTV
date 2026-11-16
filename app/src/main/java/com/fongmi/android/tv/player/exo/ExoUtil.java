@@ -87,7 +87,7 @@ public final class ExoUtil {
     }
 
     static RenderersFactory buildRenderersFactory(AudioProcessor audioProcessor, TextOutput secondaryTextOutput, LibassPlaybackSession libassPlaybackSession, DecoderManager decoderManager, int motionFps, boolean decoderPrewarmingEnabled) {
-        return new ExoRenderersFactory(audioProcessor, secondaryTextOutput, libassPlaybackSession, decoderManager, motionFps).experimentalSetEnableMediaCodecVideoRendererPrewarming(decoderPrewarmingEnabled);
+        return new ExoRenderersFactory(audioProcessor, secondaryTextOutput, libassPlaybackSession, decoderManager, motionFps).setEnableRuntimeUpdates(true).experimentalSetEnableMediaCodecVideoRendererPrewarming(decoderPrewarmingEnabled);
     }
 
     private static AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams, @Nullable AudioProcessor audioProcessor) {

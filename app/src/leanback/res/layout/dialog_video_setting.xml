@@ -295,8 +295,8 @@
                 android:visibility="gone">
 
                 <include
-                    android:id="@+id/mpvMotion"
-                    layout="@layout/view_mpv_motion" />
+                    android:id="@+id/motion"
+                    layout="@layout/view_setting_slider" />
 
                 <include
                     android:id="@+id/saturation"

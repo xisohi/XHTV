@@ -4,6 +4,10 @@ import static com.fongmi.android.tv.ui.dialog.SettingPanelViews.applyEnabled;
 
 import android.view.View;
 
+import androidx.annotation.Nullable;
+import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
+
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogVideoSettingBinding;
 import com.fongmi.android.tv.databinding.ViewSettingSliderBinding;
@@ -21,7 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-final class VideoSettingPanel {
+final class VideoSettingPanel implements Player.Listener {
 
     private static final int[][] PRESETS = {
             {VideoEffectPreset.OFF, R.id.presetOriginal},
@@ -42,14 +46,16 @@ final class VideoSettingPanel {
 
     private final DialogVideoSettingBinding binding;
     private final PlayerManager player;
-    private final MpvMotionSettingPanel motionPanel;
+    @Nullable private final Player trackSource;
+    private final MotionSettingPanel motionPanel;
     private int currentTab;
     private boolean previewOriginal;
 
     VideoSettingPanel(DialogVideoSettingBinding binding, PlayerManager player) {
         this.binding = binding;
         this.player = player;
-        this.motionPanel = new MpvMotionSettingPanel(binding.mpvMotion, player.getPlayer());
+        this.trackSource = player.getVideoSettingEventSource();
+        this.motionPanel = new MotionSettingPanel(binding.motion, player.getPlayer(), player.getExoMotionController());
     }
 
     void bind() {
@@ -62,12 +68,19 @@ final class VideoSettingPanel {
         showTab(0);
         updateControls();
         PlaybackDialogFocus.selectFirstTab(binding.getRoot(), binding.tabGroup, binding.tabPreset);
+        if (trackSource != null) trackSource.addListener(this);
     }
 
     void release() {
+        if (trackSource != null) trackSource.removeListener(this);
         motionPanel.release();
         binding.tabGroup.clearOnButtonCheckedListeners();
         previewOriginal(false);
+    }
+
+    @Override
+    public void onTracksChanged(Tracks tracks) {
+        if (trackSource == player.getVideoSettingEventSource()) updateControls();
     }
 
     private void onPresetChecked(ChipGroup group, List<Integer> checkedIds) {

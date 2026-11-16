@@ -75,32 +75,16 @@ public class PlayerSetting {
         Prefers.put("mpv_vulkan", vulkan);
     }
 
-    public static int getMpvMotion() {
-        return Math.clamp(Prefers.getInt("mpv_motion"), 0, 2);
+    public static int getMotion() {
+        return Math.clamp(Prefers.getInt("player_motion"), 0, 2);
     }
 
-    public static void putMpvMotion(int motion) {
-        Prefers.put("mpv_motion", Math.clamp(motion, 0, 2));
+    public static void putMotion(int motion) {
+        Prefers.put("player_motion", Math.clamp(motion, 0, 2));
     }
 
-    public static int getMpvMotionFps() {
-        return getMotionFps(getMpvMotion());
-    }
-
-    public static int getExoMotion() {
-        return Math.clamp(Prefers.getInt("exo_motion"), 0, 2);
-    }
-
-    public static void putExoMotion(int motion) {
-        Prefers.put("exo_motion", Math.clamp(motion, 0, 2));
-    }
-
-    public static int getExoMotionFps() {
-        return getMotionFps(getExoMotion());
-    }
-
-    private static int getMotionFps(int motion) {
-        return switch (motion) {
+    public static int getMotionFps() {
+        return switch (getMotion()) {
             case 1 -> 60;
             case 2 -> 120;
             default -> 0;

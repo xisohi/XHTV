@@ -95,12 +95,12 @@ public final class MpvUtil {
     }
 
     public static boolean isMotionEnabled() {
-        return PlayerSetting.getMpvMotionFps() > 0 && isVulkanSupported();
+        return PlayerSetting.getMotionFps() > 0 && isVulkanSupported();
     }
 
-    public static MpvPlayer buildPlayer(Player.Listener listener) {
+    static MpvPlayer buildPlayer(Player.Listener listener, MpvPlayerConfig config) {
         MpvDecoderMode mode = MpvDecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_MPV, C.TRACK_TYPE_VIDEO));
-        MpvPlayer player = new MpvPlayer.Builder(App.get()).setVideoDecoderMode(mode).setConfig(buildConfig()).build();
+        MpvPlayer player = new MpvPlayer.Builder(App.get()).setVideoDecoderMode(mode).setConfig(config).build();
         player.setSubtitleContentLoader(new SubtitleFileContent());
         setPreferredTextLanguages(player);
         player.addListener(listener);
@@ -134,23 +134,17 @@ public final class MpvUtil {
         return ProgressiveIsoCache.withDiskCache(factory, cache);
     }
 
-    static MpvPlayerConfig buildConfig() {
+    static MpvPlayerConfig buildConfig(VideoOptions videoOptions) {
         ExternalFont.Item font = SubtitleSetting.getFont();
         File cacheDir = Path.mpvCache();
         File defaultFontsDirectory = ExternalFont.getDirectory();
         AndroidFontConfig.prepare();
-        MpvPlayerConfig.Builder builder = new MpvPlayerConfig.Builder().setDataSourceFactory(createDataSourceFactory()).setDefaultFontDirectories(defaultFontsDirectory, defaultFontsDirectory).addConfigDirectory(Path.mpv()).addAndroidDefaults(buildAndroidOptions(cacheDir));
+        MpvPlayerConfig.Builder builder = new MpvPlayerConfig.Builder().setDataSourceFactory(createDataSourceFactory()).setDefaultFontDirectories(defaultFontsDirectory, defaultFontsDirectory).addConfigDirectory(Path.mpv());
+        addAndroidOptions(builder, cacheDir, videoOptions);
         builder.addPreInitStringOption("proxy-url", "http://127.0.0.1:" + Proxy.getPort() + "/proxy?");
         builder.addTlsCaFileFromAsset(App.get(), ASSET_CA_FILE, Path.files(ASSET_CA_FILE)).addAndroidSubtitleOptions(App.get(), buildSubtitleOptions(font));
         if (PreloadSetting.isEnabled()) builder.addDiskCacheOptions(cacheDir, PreloadSetting.getTimeSeconds());
-        addMotionOptions(builder);
         return builder.build();
-    }
-
-    static void addMotionOptions(MpvPlayerConfig.Builder builder) {
-        int fps = PlayerSetting.getMpvMotionFps();
-        if (fps == 0 || !isVulkanSupported()) return;
-        builder.setMotionInterpolationFps(fps);
     }
 
     public static List<MpvScripts.Item> readScripts() {
@@ -162,12 +156,25 @@ public final class MpvUtil {
         }
     }
 
-    static MpvAndroidOptions buildAndroidOptions(File shaderCacheDirectory) {
-        boolean motion = isMotionEnabled();
-        MpvAndroidOptions.Builder builder = new MpvAndroidOptions.Builder().setShaderCacheDirectory(shaderCacheDirectory).setAudioPassthroughEnabled(DecodeSetting.isAudioPassThrough()).setDolbyVisionOutputPolicy(DecodeSetting.getDolbyVisionOutputPolicy());
-        builder.setVulkanEnabled(isVulkanSupported() && (PlayerSetting.isMpvVulkan() || motion));
-        builder.setGpuNextEnabled(PlayerSetting.isMpvGpuNext() || motion);
-        return builder.build();
+    static VideoOptions getVideoOptions() {
+        boolean vulkan = isVulkanSupported();
+        int fps = vulkan ? PlayerSetting.getMotionFps() : 0;
+        boolean motion = fps > 0;
+        return new VideoOptions(fps, PlayerSetting.isMpvGpuNext() || motion, vulkan && (PlayerSetting.isMpvVulkan() || motion));
+    }
+
+    static void addAndroidOptions(MpvPlayerConfig.Builder config, File shaderCacheDirectory, VideoOptions videoOptions) {
+        MpvAndroidOptions.Builder options = new MpvAndroidOptions.Builder().setShaderCacheDirectory(shaderCacheDirectory).setAudioPassthroughEnabled(DecodeSetting.isAudioPassThrough()).setDolbyVisionOutputPolicy(DecodeSetting.getDolbyVisionOutputPolicy());
+        options.setGpuNextEnabled(videoOptions.gpuNext());
+        options.setVulkanEnabled(videoOptions.vulkan());
+        config.addAndroidDefaults(options.build()).setMotionInterpolationFps(videoOptions.motionFps());
+    }
+
+    record VideoOptions(int motionFps, boolean gpuNext, boolean vulkan) {
+
+        boolean hasSameOutput(VideoOptions options) {
+            return gpuNext == options.gpuNext && vulkan == options.vulkan;
+        }
     }
 
     static void setPreferredTextLanguages(MpvPlayer player) {
