@@ -164,6 +164,7 @@
     <string name="subtitle_style">Style</string>
     <string name="playback_font">Font</string>
     <string name="playback_font_default">System default</string>
+    <string name="playback_font_choose">Choose font file</string>
     <string name="playback_font_import">Import font</string>
     <string name="playback_font_imported">Font imported: %1$s</string>
     <string name="playback_font_import_failed">Unable to import font</string>
@@ -335,7 +336,6 @@
     <string name="player_engine">Engine</string>
     <string name="player_debug">Debug</string>
     <string name="player_render">Video output</string>
-    <string name="player_libass">libass</string>
     <string name="player_background">Background play</string>
     <string name="player_audio_pass_through">Audio passthrough</string>
     <string name="player_audio_decode">Audio software decode</string>
@@ -345,7 +345,7 @@
     <string name="player_adblock">Remove ads</string>
     <string name="player_tunnel">Tunnel mode</string>
     <string name="player_buffer">Buffer time</string>
-    <string name="player_decode_setting">Decode setting</string>
+    <string name="player_output_setting">Output settings</string>
     <string name="player_preload_setting">Preload setting</string>
     <string name="player_preload">Preload</string>
     <string name="player_preload_next">Preload next episode</string>
@@ -357,14 +357,14 @@
     <string name="player_preload_time_value">%1$d seconds</string>
     <string name="player_mpv_conf">mpv.conf</string>
     <string name="player_mpv_gpu_next">gpu-next</string>
-    <string name="player_mpv_vulkan">vulkan</string>
+    <string name="player_mpv_vulkan">Vulkan</string>
     <string name="player_motion_restart">Applies the next time you open a video</string>
     <string name="player_motion">Frame interpolation</string>
     <string name="player_motion_unavailable">Unavailable</string>
     <string name="player_motion_fps">%1$d fps</string>
     <string name="player_motion_capped">Target: %1$.2f fps (display limit)</string>
     <string name="player_motion_failed">Unable to change interpolation</string>
-    <string name="player_mpv_conf_priority_hint">Reopen playback to load mpv.conf. Media options, scripts, and controls can change settings afterward; the last write applies. volume is the control volume baseline.</string>
+    <string name="player_mpv_conf_priority_hint">Reopen playback to load mpv.conf. Subtitle layout uses the app settings. Media options, scripts, and controls can modify options afterward. volume is the control volume baseline.</string>
     <string name="player_mpv_conf_conflict_hint">Player controls manage: %1$s. Media options, scripts, and controls follow the last write; volume is the control volume baseline.</string>
     <string name="player_mpv_conf_import_success">Loaded mpv.conf. Tap OK to save.</string>
     <string name="player_mpv_conf_import_failed">Unable to import mpv.conf</string>

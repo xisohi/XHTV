@@ -5,6 +5,7 @@ import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 import androidx.media3.common.DecoderMode;
 import androidx.media3.common.DiscMenuController;
+import androidx.media3.common.DolbyVisionOutputPolicy;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -16,6 +17,7 @@ import androidx.media3.common.text.SubtitleOffsets;
 import androidx.media3.common.text.SubtitleSelectionState;
 import androidx.media3.mpvplayer.MpvDecoderMode;
 import androidx.media3.mpvplayer.MpvPlayer;
+import androidx.media3.mpvplayer.MpvPlayer.VideoOutputOption;
 import androidx.media3.mpvplayer.MpvPlayerConfig;
 
 import com.fongmi.android.tv.App;
@@ -27,8 +29,11 @@ import com.fongmi.android.tv.player.media.ConcatenatingUrl;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.server.LogSession;
-import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.setting.OutputSetting;
 import com.fongmi.android.tv.setting.SubtitleSetting;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import org.json.JSONException;
 
@@ -40,15 +45,23 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
     private final MpvPlayerEffect effect;
     private final MpvScriptSession scripts;
     private final MpvPlayer player;
-    private final MpvUtil.VideoOptions videoOptions;
+    private boolean audioPassThrough;
+    private @DolbyVisionOutputPolicy.Mode int dolbyVisionOutputPolicy;
+    private boolean gpuNext;
+    private boolean vulkan;
     private int configuredMotionFps;
     private final Runnable motionListener = this::updateMotionFps;
     private final Runnable updateLog = this::updateLogLevel;
     private final Runnable logListener = () -> App.post(updateLog);
+    @Nullable private Runnable audioOutputListener;
 
     public MpvPlayerEngine(Player.Listener listener) {
         List<MpvScripts.Item> scriptItems = MpvUtil.readScripts();
-        this.videoOptions = MpvUtil.getVideoOptions();
+        this.gpuNext = OutputSetting.isMpvGpuNext();
+        this.vulkan = OutputSetting.isMpvVulkan();
+        this.audioPassThrough = OutputSetting.isAudioPassThrough();
+        this.dolbyVisionOutputPolicy = OutputSetting.getDolbyVisionOutputPolicy();
+        MpvUtil.VideoOptions videoOptions = MpvUtil.getVideoOptions();
         MpvPlayerConfig config = MpvUtil.buildConfig(videoOptions);
         this.configuredMotionFps = videoOptions.motionFps();
         this.player = MpvUtil.buildPlayer(listener, config);
@@ -56,7 +69,7 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
         this.scripts = new MpvScriptSession(player, scriptItems);
         this.provider = new MpvErrorMessageProvider();
         this.effect = new MpvPlayerEffect(player);
-        this.player.setAudioOutputListener(effect::applyAudioEffect);
+        this.player.setAudioOutputListener(this::onAudioOutputChanged);
         this.player.addListener(this);
         applySecondarySubtitleMode(SubtitleSetting.getSecondaryMode());
         LogSession.get().addListener(logListener);
@@ -79,13 +92,50 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
     private void updateMotionFps() {
         if (!player.isMotionInterpolationSupported() || player.isMotionInterpolationUpdatePending()) return;
         int fps = player.getMotionInterpolationFps();
-        if (fps == PlayerSetting.getMotionFps()) configuredMotionFps = fps;
+        if (fps == OutputSetting.getMotionFps()) configuredMotionFps = fps;
     }
 
     @Override
     public boolean needsRebuild() {
-        MpvUtil.VideoOptions options = MpvUtil.getVideoOptions();
-        return configuredMotionFps != options.motionFps() || !videoOptions.hasSameOutput(options);
+        boolean outputChanged = audioPassThrough != OutputSetting.isAudioPassThrough() || dolbyVisionOutputPolicy != OutputSetting.getDolbyVisionOutputPolicy();
+        return outputChanged || configuredMotionFps != MpvUtil.getMotionFps() || gpuNext != OutputSetting.isMpvGpuNext() || vulkan != OutputSetting.isMpvVulkan();
+    }
+
+    public ListenableFuture<Boolean> setDolbyVisionOutputPolicy(@DolbyVisionOutputPolicy.Mode int policy) {
+        return Futures.transform(player.setDolbyVisionOutputPolicy(policy), reloaded -> {
+            dolbyVisionOutputPolicy = policy;
+            return reloaded;
+        }, MoreExecutors.directExecutor());
+    }
+
+    public ListenableFuture<Void> setAudioPassThrough(boolean enabled) {
+        return Futures.transform(player.setAudioPassthroughEnabled(enabled), result -> {
+            audioPassThrough = enabled;
+            return null;
+        }, MoreExecutors.directExecutor());
+    }
+
+    @Nullable
+    public Boolean getPendingVideoOutput(VideoOutputOption option) {
+        return player.getPendingVideoOutput(option);
+    }
+
+    public ListenableFuture<Void> setVideoOutput(VideoOutputOption option, boolean enabled) {
+        return Futures.transform(player.setVideoOutput(option, enabled), result -> {
+            onVideoOutputApplied(option, enabled);
+            return null;
+        }, MoreExecutors.directExecutor());
+    }
+
+    private void onVideoOutputApplied(VideoOutputOption option, boolean enabled) {
+        if (option == VideoOutputOption.GPU_NEXT) {
+            gpuNext = enabled;
+            OutputSetting.putMpvGpuNext(gpuNext);
+        } else {
+            vulkan = enabled;
+            OutputSetting.putMpvVulkan(vulkan);
+        }
+        effect.applyVideoEffect();
     }
 
     @Override
@@ -101,6 +151,16 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
     @Override
     public int getAudioChannelCount() {
         return player.getAudioChannelCount();
+    }
+
+    @Override
+    public void setAudioOutputListener(@Nullable Runnable listener) {
+        audioOutputListener = listener;
+    }
+
+    private void onAudioOutputChanged() {
+        effect.applyAudioEffect();
+        if (audioOutputListener != null) audioOutputListener.run();
     }
 
     @Override

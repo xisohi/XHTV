@@ -5,7 +5,11 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.media3.common.DolbyVisionOutputPolicy;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.Timeline;
+import androidx.media3.common.TrackSelectionOverride;
+import androidx.media3.common.Tracks;
 import androidx.media3.common.audio.AudioProcessor;
 import androidx.media3.decoder.ffmpeg.FfmpegMotionInterpolationController;
 import androidx.media3.exoplayer.DecoderManager;
@@ -20,19 +24,28 @@ import androidx.media3.exoplayer.source.preload.PreloadException;
 import androidx.media3.exoplayer.source.preload.PreloadManagerListener;
 import androidx.media3.exoplayer.text.SecondaryTextOutput;
 import androidx.media3.exoplayer.text.SubtitleTranscriptSession;
+import androidx.media3.exoplayer.trackselection.DecodeTrackSelector;
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
+import androidx.media3.exoplayer.trackselection.ExoTrackSelection;
 import androidx.media3.exoplayer.trackselection.SecondaryTextTrackSelector;
+import androidx.media3.exoplayer.trackselection.TrackSelectionUtil;
 import androidx.media3.exoplayer.trackselection.TrackSelector;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.player.subtitle.AndroidFontConfig;
 import com.fongmi.android.tv.player.subtitle.ExternalFont;
 import com.fongmi.android.tv.player.subtitle.SubtitleFileContent;
-import com.fongmi.android.tv.setting.DecodeSetting;
+import com.fongmi.android.tv.player.track.TrackUtil;
+import com.fongmi.android.tv.setting.OutputSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 final class ExoPlayerSession {
 
@@ -48,7 +61,10 @@ final class ExoPlayerSession {
     private final LibassPlaybackSession libassPlaybackSession;
     private final SubtitleTranscriptSession subtitleTranscriptSession;
     private final DefaultPreloadManager preloadManager;
-    private final boolean libassEnabled;
+    private final AtomicReference<AudioPreloadPreference> preloadAudioPreference = new AtomicReference<>();
+    private final List<EpisodeTrackSelector> trackSelectors = new ArrayList<>(2);
+    private boolean audioPassThrough;
+    private @DolbyVisionOutputPolicy.Mode int dolbyVisionOutputPolicy;
     private final boolean decoderPrewarmingEnabled;
     private final int initialMotionFps;
     private final ExoPlayer player;
@@ -58,16 +74,17 @@ final class ExoPlayerSession {
     private PreloadRequest preloadRequest;
 
     ExoPlayerSession(AudioProcessor audioProcessor) {
-        this.initialMotionFps = PlayerSetting.getMotionFps();
+        this.audioPassThrough = OutputSetting.isAudioPassThrough();
+        this.dolbyVisionOutputPolicy = OutputSetting.getDolbyVisionOutputPolicy();
+        this.initialMotionFps = OutputSetting.getMotionFps();
         this.decoderPrewarmingEnabled = PreloadSetting.shouldPrewarmDecoder();
-        DecoderMode audioMode = DecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_AUDIO));
-        DecoderMode videoMode = DecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_VIDEO));
+        DecoderMode audioMode = DecoderMode.fromCommonDecoderMode(PlayerSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_AUDIO));
+        DecoderMode videoMode = DecoderMode.fromCommonDecoderMode(PlayerSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_VIDEO));
         this.decoderManager = new DecoderManager(audioMode, videoMode);
-        TrackSelector.Factory decodeTrackSelectorFactory = context -> ExoUtil.buildTrackSelector(decoderManager);
+        TrackSelector.Factory decodeTrackSelectorFactory = context -> createTrackSelector();
         SecondaryTextTrackSelector.Factory secondaryTextTrackSelectorFactory = new SecondaryTextTrackSelector.Factory(decodeTrackSelectorFactory);
         SecondaryTextOutput secondaryTextOutput = new SecondaryTextOutput();
-        this.libassEnabled = PlayerSetting.isLibass();
-        this.libassPlaybackSession = createLibassPlaybackSession(libassEnabled);
+        this.libassPlaybackSession = createLibassPlaybackSession();
         this.subtitleTranscriptSession = new SubtitleTranscriptSession();
         this.subtitleTranscriptSession.setLoader(new SubtitleFileContent());
         DefaultPreloadManager.Builder builder = createPreloadManagerBuilder(audioProcessor, secondaryTextTrackSelectorFactory, secondaryTextOutput);
@@ -105,7 +122,38 @@ final class ExoPlayerSession {
     }
 
     boolean hasPlaybackSettingsChanged() {
-        return libassEnabled != PlayerSetting.isLibass() || getConfiguredMotionFps() != PlayerSetting.getMotionFps();
+        boolean outputChanged = isTunnelingEnabled() != OutputSetting.isTunnelingEnabled() || audioPassThrough != OutputSetting.isAudioPassThrough() || dolbyVisionOutputPolicy != OutputSetting.getDolbyVisionOutputPolicy();
+        return outputChanged || getConfiguredMotionFps() != OutputSetting.getMotionFps();
+    }
+
+    void setDolbyVisionOutputPolicy(@DolbyVisionOutputPolicy.Mode int policy) {
+        if (dolbyVisionOutputPolicy == policy) return;
+        preloadManager.setDolbyVisionOutputPolicy(policy);
+        player.setDolbyVisionOutputPolicy(policy);
+        dolbyVisionOutputPolicy = policy;
+    }
+
+    void setAudioPassThrough(boolean enabled) {
+        if (audioPassThrough == enabled) return;
+        preloadManager.setAudioPassthroughEnabled(enabled);
+        player.setAudioPassthroughEnabled(enabled);
+        audioPassThrough = enabled;
+    }
+
+    void setTunnelingEnabled(boolean enabled) {
+        for (DecodeTrackSelector selector : trackSelectors) selector.setParameters(selector.buildUponParameters().setTunnelingEnabled(enabled));
+    }
+
+    private boolean isTunnelingEnabled() {
+        return ((DefaultTrackSelector.Parameters) player.getTrackSelectionParameters()).tunnelingEnabled;
+    }
+
+    private DecodeTrackSelector createTrackSelector() {
+        EpisodeTrackSelector selector = new EpisodeTrackSelector();
+        decoderManager.registerTrackSelector(selector);
+        ExoUtil.configureTrackSelector(selector);
+        trackSelectors.add(selector);
+        return selector;
     }
 
     private int getConfiguredMotionFps() {
@@ -131,11 +179,26 @@ final class ExoPlayerSession {
     void preload(MediaItem mediaItem, long startPositionMs, Runnable onReady, Runnable onError) {
         PreloadRequest request = new PreloadRequest(mediaItem, Math.max(0, startPositionMs), onReady, onError);
         clearPreload();
+        preloadAudioPreference.set(findAudioPreference(mediaItem));
         preloadRequest = request;
         libassPlaybackSession.setPreloadMediaItem(mediaItem);
         subtitleTranscriptSession.setPreloadMediaItem(mediaItem);
         preloadManager.add(request.mediaItem(), 0);
         preloadManager.invalidate();
+    }
+
+    void updatePreloadAudioPreference() {
+        PreloadRequest request = preloadRequest;
+        if (request == null) return;
+        preloadAudioPreference.set(findAudioPreference(request.mediaItem()));
+        preloadManager.invalidate();
+        for (EpisodeTrackSelector selector : trackSelectors) selector.invalidateEpisodeSelection();
+    }
+
+    @Nullable
+    private AudioPreloadPreference findAudioPreference(MediaItem mediaItem) {
+        Track track = Track.find(mediaItem.mediaId).stream().filter(item -> item.getType() == C.TRACK_TYPE_AUDIO && !item.isSecondary()).findFirst().orElse(null);
+        return track == null ? null : new AudioPreloadPreference(mediaItem.requestMetadata, track);
     }
 
     @Nullable
@@ -162,6 +225,17 @@ final class ExoPlayerSession {
         preloadManager.remove(request.mediaItem());
     }
 
+    void clearPreloadAudioPreference() {
+        preloadAudioPreference.set(null);
+    }
+
+    void onTrackRestoreRequested() {
+        AudioPreloadPreference preference = preloadAudioPreference.get();
+        if (preference != null && preference.matches(player.getCurrentMediaItem())) {
+            player.createMessage((type, payload) -> preloadAudioPreference.compareAndSet(preference, null)).send();
+        }
+    }
+
     void release() {
         preloadRequest = null;
         motionController.release();
@@ -181,14 +255,14 @@ final class ExoPlayerSession {
         return new DefaultPreloadManager.Builder(App.get(), ignored -> DefaultPreloadManager.PreloadStatus.specifiedRangeLoaded(getPreloadStartPositionMs(), PRELOAD_DURATION_MS)).setMediaSourceFactorySupplier(ExoMediaSourceFactory.supplier(libassPlaybackSession, subtitleTranscriptSession)).setRenderersFactory(ExoUtil.buildRenderersFactory(audioProcessor, secondaryTextOutput, libassPlaybackSession, decoderManager, initialMotionFps, decoderPrewarmingEnabled)).setTrackSelectorFactory(secondaryTextTrackSelectorFactory).setLoadControl(ExoUtil.buildLoadControl(MAX_PRELOAD_BUFFER_BYTES));
     }
 
-    private static LibassPlaybackSession createLibassPlaybackSession(boolean libassEnabled) {
-        File fontConfig = libassEnabled ? AndroidFontConfig.prepare() : null;
+    private static LibassPlaybackSession createLibassPlaybackSession() {
+        File fontConfig = AndroidFontConfig.prepare();
         String fontConfigPath = fontConfig != null && fontConfig.length() > 0 ? fontConfig.getAbsolutePath() : null;
-        ExternalFont.Item font = libassEnabled ? SubtitleSetting.getFont() : null;
+        ExternalFont.Item font = SubtitleSetting.getFont();
         String fontFamily = font == null ? null : font.familyName();
-        String fontsDirectory = libassEnabled ? (font == null ? ExternalFont.getDirectory() : font.directory()).getAbsolutePath() : null;
+        String fontsDirectory = ExternalFont.getDirectory().getAbsolutePath();
         LibassConfiguration configuration = new LibassConfiguration.Builder().setFontConfig(fontConfigPath).setFontsDirectory(fontsDirectory).setDefaultFontFamily(fontFamily).setMaximumRenderPixels(LIBASS_MAX_RENDER_PIXELS).setMaximumGlyphCount(LIBASS_MAX_GLYPH_COUNT).setMaximumBitmapCacheSizeMb(LIBASS_MAX_BITMAP_CACHE_SIZE_MB).build();
-        return new LibassPlaybackSession(configuration, libassEnabled);
+        return new LibassPlaybackSession(configuration);
     }
 
     private final class PreloadListener implements PreloadManagerListener {
@@ -217,6 +291,41 @@ final class ExoPlayerSession {
             Log.w(TAG, "Preload failed", exception);
             clearPreload();
             request.onError().run();
+        }
+    }
+
+    private final class EpisodeTrackSelector extends DecodeTrackSelector {
+
+        EpisodeTrackSelector() {
+            super(App.get());
+        }
+
+        void invalidateEpisodeSelection() {
+            invalidate(null);
+        }
+
+        @Override
+        protected Parameters resolveParametersForSelection(MappedTrackInfo mappedTrackInfo, MediaSource.MediaPeriodId periodId, Timeline timeline, Parameters parameters) {
+            AudioPreloadPreference preference = preloadAudioPreference.get();
+            if (preference == null || !preference.matches(getMediaItem(periodId, timeline))) return parameters;
+            Tracks tracks = TrackSelectionUtil.buildTracks(mappedTrackInfo, new ExoTrackSelection[mappedTrackInfo.getRendererCount()]);
+            TrackSelectionOverride override = TrackUtil.findRestorationOverride(tracks, preference.track());
+            return override == null ? parameters : parameters.buildUpon().setOverrideForType(override).build();
+        }
+
+        @Nullable
+        private MediaItem getMediaItem(MediaSource.MediaPeriodId periodId, Timeline timeline) {
+            int index = timeline.getIndexOfPeriod(periodId.periodUid);
+            if (index == C.INDEX_UNSET) return null;
+            int windowIndex = timeline.getPeriod(index, new Timeline.Period()).windowIndex;
+            return timeline.getWindow(windowIndex, new Timeline.Window()).mediaItem;
+        }
+    }
+
+    private record AudioPreloadPreference(MediaItem.RequestMetadata requestMetadata, Track track) {
+
+        boolean matches(@Nullable MediaItem mediaItem) {
+            return mediaItem != null && mediaItem.requestMetadata == requestMetadata;
         }
     }
 

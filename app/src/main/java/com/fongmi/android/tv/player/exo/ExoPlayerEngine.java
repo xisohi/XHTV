@@ -8,6 +8,7 @@ import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.DecoderMode;
 import androidx.media3.common.DiscMenuController;
+import androidx.media3.common.DolbyVisionOutputPolicy;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -35,7 +36,7 @@ import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.server.LogSession;
-import com.fongmi.android.tv.setting.DecodeSetting;
+import com.fongmi.android.tv.setting.OutputSetting;
 import com.google.gson.JsonObject;
 
 import java.util.List;
@@ -52,6 +53,7 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     private final ExoPlaybackLog playbackLog = new ExoPlaybackLog();
     private final Runnable updateLog = this::updateEventLogger;
     private final Runnable logListener = () -> App.post(updateLog);
+    @Nullable private Runnable audioOutputListener;
     private EventLogger eventLogger;
     private PlaySpec spec;
     private PlaySpec preloadSpec;
@@ -89,12 +91,22 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
 
     @Override
     public void onAudioTrackInitialized(@NonNull EventTime eventTime, @NonNull AudioSink.AudioTrackConfig audioTrackConfig) {
-        effect.applyAudioEffect();
+        onAudioOutputChanged();
     }
 
     @Override
     public void onAudioTrackReleased(@NonNull EventTime eventTime, @NonNull AudioSink.AudioTrackConfig audioTrackConfig) {
+        onAudioOutputChanged();
+    }
+
+    private void onAudioOutputChanged() {
         effect.applyAudioEffect();
+        if (audioOutputListener != null) audioOutputListener.run();
+    }
+
+    @Override
+    public void setAudioOutputListener(@Nullable Runnable listener) {
+        audioOutputListener = listener;
     }
 
     @Override
@@ -105,7 +117,7 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
         AudioAttributes attributes = player.getAudioAttributes();
         Log.e("TV-Playback", "player=" + Integer.toHexString(System.identityHashCode(navigation.getPlayer())) + " event=audioSinkError"
                 + " elapsedRealtimeMs=" + eventTime.realtimeMs + " positionMs=" + eventTime.currentPlaybackPositionMs
-                + " playerAudioSessionId=" + player.getAudioSessionId() + " tunnelingSettingEnabled=" + DecodeSetting.isTunnelingEnabled()
+                + " playerAudioSessionId=" + player.getAudioSessionId() + " tunnelingSettingEnabled=" + OutputSetting.isTunnelingEnabled()
                 + " playerAudioUsage=" + attributes.usage + " playerAudioFlags=" + attributes.flags
                 + " error=" + message.substring(0, end) + (end < message.length() ? " [truncated]" : ""));
     }
@@ -128,6 +140,22 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     @Override
     public boolean canReuseForPreload() {
         return !session.hasPlaybackSettingsChanged();
+    }
+
+    public void setDolbyVisionOutputPolicy(@DolbyVisionOutputPolicy.Mode int policy) {
+        session.setDolbyVisionOutputPolicy(policy);
+    }
+
+    public void setAudioPassThrough(boolean enabled) {
+        session.setAudioPassThrough(enabled);
+    }
+
+    public void updatePreloadAudioPreference() {
+        session.updatePreloadAudioPreference();
+    }
+
+    public void setTunnelingEnabled(boolean enabled) {
+        session.setTunnelingEnabled(enabled);
     }
 
     @Override
@@ -209,6 +237,7 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     @Override
     public boolean setMediaItem(PlaySpec spec, long startPositionMs) {
         this.spec = spec;
+        session.clearPreloadAudioPreference();
         clearPreloadQueue();
         MediaItem item = MediaItemFactory.from(this.spec);
         MediaSource source = navigation.prepareMediaSource(App.get(),
@@ -269,7 +298,7 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     public boolean seekToNext() {
         int index = player.getCurrentMediaItemIndex() + 1;
         if (!preloadAttached || preloadItem == null || index >= player.getMediaItemCount() || !preloadItem.equals(player.getMediaItemAt(index))) return false;
-        player.seekTo(index, session.getPreloadStartPositionMs());
+        player.seekToPreloadedMediaItem(index, session.getPreloadStartPositionMs());
         return true;
     }
 
@@ -296,6 +325,11 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     public void clearPreload() {
         clearPreloadQueue();
         session.clearPreload();
+    }
+
+    @Override
+    public void onTrackRestoreRequested() {
+        session.onTrackRestoreRequested();
     }
 
     private void clearPreloadQueue() {

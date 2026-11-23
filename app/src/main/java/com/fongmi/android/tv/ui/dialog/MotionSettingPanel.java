@@ -3,45 +3,44 @@ package com.fongmi.android.tv.ui.dialog;
 import android.text.TextUtils;
 import android.view.View;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.Player;
 import androidx.media3.decoder.ffmpeg.FfmpegMotionInterpolationController;
+import androidx.media3.decoder.ffmpeg.FfmpegMotionInterpolationController.FormatSupport;
+import androidx.media3.decoder.ffmpeg.FfmpegMotionInterpolationController.OutputState;
 import androidx.media3.mpvplayer.MpvPlayer;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.databinding.ViewSettingSliderBinding;
-import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.databinding.ViewMotionSettingBinding;
+import com.fongmi.android.tv.setting.OutputSetting;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.SliderUtil;
 import com.github.catvod.utils.Task;
-import com.google.android.material.slider.Slider;
+import com.google.android.material.chip.Chip;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.concurrent.CancellationException;
 
-final class MotionSettingPanel implements Slider.OnSliderTouchListener {
+final class MotionSettingPanel {
 
-    private static final int FPS_STEP = 60;
-    private static final int MAX_FPS = 120;
-
-    private final ViewSettingSliderBinding binding;
+    private final ViewMotionSettingBinding binding;
+    private final Chip[] options;
+    @Nullable private final Player eventSource;
     @Nullable
     private final MpvPlayer mpv;
     @Nullable
     private final FfmpegMotionInterpolationController exo;
     private final Runnable motionListener = this::updateMotion;
-    private final Slider.OnChangeListener changeListener = this::onMotionChanged;
-    private TouchState touchState = TouchState.IDLE;
     @Nullable private Integer pendingFps;
     private boolean released;
 
-    MotionSettingPanel(ViewSettingSliderBinding binding, @Nullable Player player, @Nullable FfmpegMotionInterpolationController exo) {
+    MotionSettingPanel(ViewMotionSettingBinding binding, @Nullable Player eventSource, @Nullable FfmpegMotionInterpolationController exo) {
         this.binding = binding;
-        this.mpv = player instanceof MpvPlayer mpvPlayer ? mpvPlayer : null;
+        this.options = new Chip[]{binding.motionOff, binding.motion60, binding.motion120};
+        this.eventSource = eventSource;
+        this.mpv = eventSource instanceof MpvPlayer mpvPlayer ? mpvPlayer : null;
         this.exo = exo;
     }
 
@@ -49,65 +48,43 @@ final class MotionSettingPanel implements Slider.OnSliderTouchListener {
         boolean available = hasController();
         binding.getRoot().setVisibility(available ? View.VISIBLE : View.GONE);
         if (!available) return;
-        binding.title.setText(R.string.player_motion);
-        binding.value.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        binding.slider.setContentDescription(binding.title.getText());
-        binding.slider.setValueFrom(0);
-        binding.slider.setValueTo(MAX_FPS);
-        binding.slider.setStepSize(FPS_STEP);
-        binding.slider.setLabelFormatter(this::formatRate);
-        binding.slider.addOnChangeListener(changeListener);
-        binding.slider.addOnSliderTouchListener(this);
+        bindOptions();
         if (mpv != null) mpv.addMotionInterpolationListener(motionListener);
         else exo.addListener(motionListener);
         updateMotion();
     }
 
+    private void bindOptions() {
+        String[] labels = ResUtil.getStringArray(R.array.select_motion);
+        for (int i = 0; i < options.length; i++) {
+            int index = i;
+            options[i].setText(labels[i]);
+            options[i].setOnClickListener(view -> applyMotion(index));
+        }
+    }
+
     void release() {
         released = true;
-        binding.slider.setLabelFormatter(null);
-        binding.slider.removeOnChangeListener(changeListener);
-        binding.slider.removeOnSliderTouchListener(this);
+        for (Chip option : options) option.setOnClickListener(null);
         if (mpv != null) mpv.removeMotionInterpolationListener(motionListener);
         else if (exo != null) exo.removeListener(motionListener);
     }
 
-    @Override
-    public void onStartTrackingTouch(@NonNull Slider slider) {
-        if (touchState != TouchState.IDLE) return;
-        touchState = canChangeMotion() ? TouchState.TRACKING : TouchState.BLOCKED;
-    }
-
-    @Override
-    public void onStopTrackingTouch(@NonNull Slider slider) {
-        TouchState finished = touchState;
-        touchState = TouchState.IDLE;
-        if (finished == TouchState.TRACKING) applyMotion(Math.round(slider.getValue()));
-        else if (finished == TouchState.BLOCKED) updateMotion();
-    }
-
-    private void onMotionChanged(@NonNull Slider slider, float value, boolean fromUser) {
-        if (!fromUser) return;
-        switch (touchState) {
-            case IDLE -> applyMotion(Math.round(value));
-            case TRACKING -> setValueText(formatRate(value));
-            case BLOCKED -> updateMotion();
-        }
-    }
-
-    private void applyMotion(int fps) {
-        if (!canChangeMotion() || fps == getTargetFps()) {
+    private void applyMotion(int index) {
+        int fps = OutputSetting.getMotionFps(index);
+        if (!canChangeMotion(fps) || fps == getTargetFps()) {
             updateMotion();
             return;
         }
         pendingFps = fps;
+        updateMotion();
         ListenableFuture<Void> update = mpv != null ? mpv.setMotionInterpolationFps(fps) : exo.setTargetFps(fps);
-        Futures.addCallback(update, Task.callback(result -> onApplied(fps), this::onFailed), MoreExecutors.directExecutor());
+        Futures.addCallback(update, Task.callback(result -> onApplied(index), this::onFailed), MoreExecutors.directExecutor());
     }
 
-    private void onApplied(int fps) {
+    private void onApplied(int index) {
         pendingFps = null;
-        PlayerSetting.putMotion(fps / FPS_STEP);
+        OutputSetting.putMotion(index);
         updateMotion();
     }
 
@@ -117,29 +94,73 @@ final class MotionSettingPanel implements Slider.OnSliderTouchListener {
         updateMotion();
     }
 
-    private void updateMotion() {
+    void updateMotion() {
         if (released || !hasController()) return;
-        boolean supported = isSupported();
-        if (touchState == TouchState.TRACKING) {
-            if (supported && !isUpdatePending()) return;
-            touchState = TouchState.BLOCKED;
+        if (isUpdatePending()) {
+            if (pendingFps != null) checkOption(getOptionIndex(pendingFps));
+            else if (binding.motionGroup.getCheckedChipId() == View.NO_ID) checkOption(getOptionIndex(getTargetFps()));
+            for (Chip option : options) option.setClickable(false);
+            return;
         }
-        int fps = pendingFps == null ? getTargetFps() : pendingFps;
-        binding.slider.setEnabled(supported || touchState == TouchState.BLOCKED);
-        SliderUtil.setValue(binding.slider, fps);
-        setValueText(getValueText(supported, fps));
+        if (mpv == null) {
+            updateExoMotion();
+            return;
+        }
+        boolean supported = mpv.canSetMotionInterpolationFps();
+        if (!supported && !isMpvVideoOutputReady()) {
+            checkOption(OutputSetting.getMotion());
+            updateStatus("");
+            return;
+        }
+        int fps = getTargetFps();
+        int index = getOptionIndex(fps);
+        checkOption(index);
+        for (Chip option : options) {
+            option.setEnabled(supported);
+            option.setClickable(supported);
+        }
+        updateStatus(getStatus(supported, fps, index));
+    }
+
+    private void updateExoMotion() {
+        FormatSupport support = exo.getFormatSupport();
+        OutputState output = exo.getOutputState();
+        int fps = exo.getTargetFps();
+        int index = getOptionIndex(fps);
+        checkOption(index);
+        for (int i = 0; i < options.length; i++) {
+            boolean enabled = canSetExoTarget(OutputSetting.getMotionFps(i), support);
+            if (support != FormatSupport.UNKNOWN) options[i].setEnabled(enabled);
+            options[i].setClickable(enabled);
+        }
+        if (output == OutputState.SWITCHING || support == FormatSupport.UNKNOWN) updateStatus("");
+        else if (support == FormatSupport.UNSUPPORTED || output == OutputState.INACTIVE) updateStatus(ResUtil.getString(R.string.player_motion_unavailable));
+        else updateStatus(index < 0 ? formatRate(fps) : "");
+    }
+
+    private void checkOption(int index) {
+        int checkedId = index < 0 ? View.NO_ID : options[index].getId();
+        if (binding.motionGroup.getCheckedChipId() == checkedId) return;
+        if (checkedId == View.NO_ID) binding.motionGroup.clearCheck();
+        else binding.motionGroup.check(checkedId);
+    }
+
+    private int getOptionIndex(int fps) {
+        for (int i = 0; i < options.length; i++) if (OutputSetting.getMotionFps(i) == fps) return i;
+        return -1;
     }
 
     private boolean hasController() {
         return mpv != null || exo != null;
     }
 
-    private boolean canChangeMotion() {
-        return isSupported() && !isUpdatePending();
+    private boolean canChangeMotion(int fps) {
+        if (released || isUpdatePending()) return false;
+        return mpv != null ? mpv.canSetMotionInterpolationFps() : exo != null && canSetExoTarget(fps, exo.getFormatSupport());
     }
 
-    private boolean isSupported() {
-        return mpv != null ? mpv.isMotionInterpolationSupported() : exo != null && exo.isSupported();
+    private boolean canSetExoTarget(int fps, FormatSupport support) {
+        return support == FormatSupport.SUPPORTED || (fps == 0 && exo.getTargetFps() > 0 && exo.isSupported());
     }
 
     private boolean isUpdatePending() {
@@ -150,25 +171,25 @@ final class MotionSettingPanel implements Slider.OnSliderTouchListener {
         return mpv != null ? mpv.getMotionInterpolationFps() : exo.getTargetFps();
     }
 
-    private String formatRate(float value) {
-        int fps = Math.round(value);
-        return fps == 0 ? ResUtil.getString(R.string.setting_off) : ResUtil.getString(R.string.player_motion_fps, fps);
+    private String formatRate(int fps) {
+        return ResUtil.getString(R.string.player_motion_fps, fps);
     }
 
-    private String getValueText(boolean supported, int fps) {
+    private String getStatus(boolean supported, int fps, int index) {
         if (!supported) return ResUtil.getString(R.string.player_motion_unavailable);
-        if (mpv != null && pendingFps == null) {
+        if (fps > 0) {
             float effectiveFps = mpv.getMotionInterpolationEffectiveTargetFps();
             if (effectiveFps > 0 && effectiveFps < fps - 0.001f) return ResUtil.getString(R.string.player_motion_capped, effectiveFps);
         }
-        return formatRate(fps);
+        return index < 0 ? formatRate(fps) : "";
     }
 
-    private void setValueText(String text) {
-        if (!TextUtils.equals(binding.value.getText(), text)) binding.value.setText(text);
+    private boolean isMpvVideoOutputReady() {
+        return SettingPanelViews.isPlaybackPrepared(eventSource) && mpv.getVideoEffectsSupport() != MpvPlayer.VIDEO_EFFECTS_UNAVAILABLE;
     }
 
-    private enum TouchState {
-        IDLE, TRACKING, BLOCKED
+    private void updateStatus(String text) {
+        if (!TextUtils.equals(binding.motionStatus.getText(), text)) binding.motionStatus.setText(text);
+        binding.motionStatus.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
     }
 }

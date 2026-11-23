@@ -19,10 +19,11 @@ import androidx.media3.exoplayer.LoadControl;
 import androidx.media3.exoplayer.Renderer;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.analytics.PlayerId;
+import androidx.media3.exoplayer.audio.AudioRendererEventListener;
 import androidx.media3.exoplayer.audio.AudioSink;
-import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.libass.LibassPlaybackSession;
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.source.preload.DefaultPreloadManager;
 import androidx.media3.exoplayer.text.TextOutput;
 import androidx.media3.exoplayer.text.TextRenderer;
@@ -31,7 +32,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.player.track.LangUtil;
-import com.fongmi.android.tv.setting.DecodeSetting;
+import com.fongmi.android.tv.setting.OutputSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.github.catvod.utils.Auth;
@@ -71,15 +72,13 @@ public final class ExoUtil {
         return item.localConfiguration != null && item.localConfiguration.tag instanceof Auth.Context auth ? auth : null;
     }
 
-    static DecodeTrackSelector buildTrackSelector(DecoderManager decoderManager) {
-        DecodeTrackSelector trackSelector = decoderManager.createTrackSelector(App.get());
+    static void configureTrackSelector(DecodeTrackSelector trackSelector) {
         DefaultTrackSelector.Parameters.Builder builder = trackSelector.buildUponParameters();
-        if (DecodeSetting.isPreferAAC()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AAC);
+        if (OutputSetting.isPreferAAC()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AAC);
         builder.setPreferredTextLanguages(LangUtil.getPreferredTextLanguages());
-        builder.setTunnelingEnabled(DecodeSetting.isTunnelingEnabled());
+        builder.setTunnelingEnabled(OutputSetting.isTunnelingEnabled());
         builder.setForceHighestSupportedBitrate(true);
         trackSelector.setParameters(builder.build());
-        return trackSelector;
     }
 
     static RenderersFactory buildRenderersFactory() {
@@ -92,7 +91,6 @@ public final class ExoUtil {
 
     private static AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams, @Nullable AudioProcessor audioProcessor) {
         DefaultAudioSink.Builder builder = new DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput).setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams);
-        if (!DecodeSetting.isAudioPassThrough()) builder.setAudioOutputProvider(new AudioTrackAudioOutputProvider.Builder(null).build());
         if (audioProcessor != null) builder.setAudioProcessors(new AudioProcessor[]{audioProcessor});
         return builder.build();
     }
@@ -109,10 +107,16 @@ public final class ExoUtil {
             this.secondaryTextOutput = secondaryTextOutput;
             this.libassPlaybackSession = libassPlaybackSession;
             if (decoderManager != null) setDecoderManager(decoderManager);
-            setEnableDecoderFallback(false);
+            setEnableDecoderFallback(decoderManager != null);
             setEnableSurfaceControlFrameRetention(true);
             setExtensionRendererMode(EXTENSION_RENDERER_MODE_ON);
-            setDolbyVisionOutputPolicy(DecodeSetting.getDolbyVisionOutputPolicy());
+            setAudioPassthroughEnabled(OutputSetting.isAudioPassThrough());
+            setDolbyVisionOutputPolicy(OutputSetting.getDolbyVisionOutputPolicy());
+        }
+
+        @Override
+        protected void buildAudioRenderers(@NonNull Context context, @ExtensionRendererMode int extensionRendererMode, @NonNull MediaCodecSelector mediaCodecSelector, boolean enableDecoderFallback, @NonNull AudioSink audioSink, @NonNull Handler eventHandler, @NonNull AudioRendererEventListener eventListener, @NonNull ArrayList<Renderer> out) {
+            super.buildAudioRenderers(context, extensionRendererMode, mediaCodecSelector, false, audioSink, eventHandler, eventListener, out);
         }
 
         @Override
